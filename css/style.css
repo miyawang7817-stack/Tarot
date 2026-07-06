@@ -79,11 +79,6 @@ main, header, footer { position: relative; z-index: 1; }
 }
 .brand-icon { font-size: 24px; }
 .brand-name { font-weight: 700; }
-.brand-slogan {
-  color: var(--text-dim);
-  font-size: 13px;
-  letter-spacing: 2px;
-}
 
 .app-footer {
   text-align: center;
@@ -92,7 +87,6 @@ main, header, footer { position: relative; z-index: 1; }
   font-size: 13px;
   letter-spacing: 1px;
 }
-.app-footer .credit { margin-top: 8px; font-size: 12px; opacity: 0.75; }
 .app-footer a { color: var(--purple); text-decoration: none; }
 .app-footer a:hover { text-decoration: underline; }
 
@@ -109,7 +103,6 @@ main, header, footer { position: relative; z-index: 1; }
   text-shadow: 0 0 24px rgba(227, 196, 110, 0.35);
   margin-bottom: 14px;
 }
-.hero-sub { color: var(--text-dim); font-size: 15px; letter-spacing: 1px; margin-bottom: 26px; }
 
 
 .spread-grid {
@@ -201,7 +194,6 @@ main, header, footer { position: relative; z-index: 1; }
   background: none;
   padding: 0;
   cursor: pointer;
-  will-change: transform;
   backface-visibility: hidden;
 }
 /* 流光：随旋转角在卡面上扫过的高光反射 */

@@ -74,8 +74,8 @@
 
   const STEP_DEG = 22.5;                 // 相邻牌的圆周角
   const VIEW_DEG = 112;                  // 可见角度范围（±）
-  const AUTO_SPEED = 0.00015;            // 自动旋转速度（张/毫秒，约 6.7 秒一张）
-  const AUTO_RAMP = 1600;                // 自动旋转的启动渐入时长（毫秒）
+  const AUTO_SPEED = 0.0003;             // 自动旋转速度（张/毫秒，约 3.3 秒一张）
+  const AUTO_RAMP = 1000;                // 自动旋转的启动渐入时长（毫秒）
   const IDLE_DELAY = 2000;               // 交互后多久恢复自动旋转
   const REDUCED_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -96,7 +96,8 @@
     state.deck = freshShuffledDeck();
     ring.rot = 0;
     ring.locked = false;
-    ring.lastTouch = performance.now();
+    // 入场发牌动画（约 0.9s）一结束就开始自动旋转，不用干等空闲判定
+    ring.lastTouch = performance.now() - IDLE_DELAY + 900;
     $('#draw-title').textContent = spread.nameZh;
     buildRing(true);
     renderTray();
@@ -142,10 +143,18 @@
       if (steps > n / 2) steps -= n;
       const el = c.el;
       if (Math.abs(steps) > maxSteps) {
-        el.style.opacity = '0';
-        el.style.pointerEvents = 'none';
-        el.classList.remove('center');
+        // 不可见的牌只在状态切换时写一次样式，并整体跳过渲染（78 张里通常 60+ 张）
+        if (!c.hidden) {
+          c.hidden = true;
+          el.style.visibility = 'hidden';
+          el.style.pointerEvents = 'none';
+          el.classList.remove('center');
+        }
         return;
+      }
+      if (c.hidden) {
+        c.hidden = false;
+        el.style.visibility = 'visible';
       }
       const theta = steps * STEP_DEG;
       const rad = theta * Math.PI / 180;
