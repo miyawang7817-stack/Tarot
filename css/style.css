@@ -203,7 +203,7 @@ main, header, footer { position: relative; z-index: 1; }
 .ring-stage {
   position: absolute;
   left: 50%;
-  top: calc(50% - 26px);
+  top: 50%;
   width: 0;
   height: 0;
   transform-style: preserve-3d;
@@ -256,85 +256,6 @@ main, header, footer { position: relative; z-index: 1; }
 }
 @keyframes ring-in {
   from { opacity: 0; }
-}
-
-/* 发光星轨 */
-.orbit {
-  position: absolute;
-  left: 50%;
-  bottom: 2px;
-  width: min(470px, 92vw);
-  height: 140px;
-  transform: translateX(-50%);
-  pointer-events: none;
-}
-.orbit-inner {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: min(470px, 92vw);
-  aspect-ratio: 1;
-  transform: translate(-50%, -50%) scaleY(0.29);
-}
-.orbit-ellipse {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  border: 1.5px solid rgba(216, 180, 95, 0.5);
-  box-shadow:
-    0 0 22px rgba(227, 196, 110, 0.28),
-    inset 0 0 34px rgba(227, 196, 110, 0.14);
-}
-.orbit-ellipse::before {
-  content: '';
-  position: absolute;
-  inset: 14px;
-  border-radius: 50%;
-  border: 1px dashed rgba(216, 180, 95, 0.3);
-}
-.orbit-comet {
-  position: absolute;
-  inset: -3px;
-  border-radius: 50%;
-  background: conic-gradient(from 0deg,
-    transparent 0 72%,
-    rgba(245, 221, 154, 0.02) 78%,
-    rgba(245, 221, 154, 0.85) 92%,
-    transparent 96%);
-  -webkit-mask: radial-gradient(circle, transparent 0 61%, #000 62.5%, #000 66%, transparent 67%);
-  mask: radial-gradient(circle, transparent 0 61%, #000 62.5%, #000 66%, transparent 67%);
-  animation: orbit-spin 5.5s linear infinite;
-}
-.orbit-comet.slow {
-  animation-duration: 9s;
-  animation-direction: reverse;
-  opacity: 0.55;
-}
-@keyframes orbit-spin { to { transform: rotate(360deg); } }
-.orbit-spark {
-  position: absolute;
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: var(--gold-bright);
-  box-shadow: 0 0 8px 2px rgba(245, 221, 154, 0.7);
-  animation: twinkle 2.4s ease-in-out infinite alternate;
-}
-.orbit-spark.sp1 { left: 12%; top: 62%; }
-.orbit-spark.sp2 { left: 84%; top: 40%; animation-delay: 0.8s; }
-.orbit-spark.sp3 { left: 52%; top: 88%; animation-delay: 1.5s; }
-.orbit-glow {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 60%;
-  height: 70%;
-  transform: translate(-50%, -50%);
-  background: radial-gradient(ellipse at center, rgba(120, 80, 220, 0.28), rgba(227, 196, 110, 0.08) 55%, transparent 75%);
-  filter: blur(6px);
-}
-@media (prefers-reduced-motion: reduce) {
-  .orbit-comet, .orbit-spark { animation: none; }
 }
 
 .stack-hint {

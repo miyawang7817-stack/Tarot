@@ -75,8 +75,9 @@
 
   const STEP_DEG = 22.5;                 // 相邻牌的圆周角
   const VIEW_DEG = 112;                  // 可见角度范围（±）
-  const AUTO_SPEED = 0.00028;            // 自动旋转速度（张/毫秒）
-  const IDLE_DELAY = 1800;               // 交互后多久恢复自动旋转
+  const AUTO_SPEED = 0.00015;            // 自动旋转速度（张/毫秒，约 6.7 秒一张）
+  const AUTO_RAMP = 1600;                // 自动旋转的启动渐入时长（毫秒）
+  const IDLE_DELAY = 2000;               // 交互后多久恢复自动旋转
   const REDUCED_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   let ring = {
@@ -108,8 +109,8 @@
 
   function ringGeom() {
     const mobile = window.innerWidth < 720;
-    // 半径由弧长间距推出：R = spacing / stepRad
-    const spacing = mobile ? 104 : 158;
+    // 半径由弧长间距推出：R = spacing / stepRad（间距 > 牌宽，留出呼吸感）
+    const spacing = mobile ? 136 : 218;
     return { R: spacing / (STEP_DEG * Math.PI / 180) };
   }
 
@@ -185,10 +186,11 @@
     ring.anim = requestAnimationFrame(tick);
   }
 
-  /* 主循环：空闲时自动缓慢旋转 */
+  /* 主循环：空闲时自动缓慢旋转（渐入启动，避免突兀） */
   function startRingLoop() {
     if (ring.loop) return;
     let last = 0;
+    let ramp = 0; // 0 → 1 的启动系数
     const frame = (now) => {
       if (views.draw.classList.contains('hidden')) { ring.loop = null; return; }
       const dt = last ? Math.min(50, now - last) : 0;
@@ -196,8 +198,13 @@
       const idle = !ring.dragging && !ring.snapping && !ring.locked
         && now - ring.lastTouch > IDLE_DELAY && !REDUCED_MOTION;
       if (idle && dt) {
-        ring.rot += dt * AUTO_SPEED;
+        ramp = Math.min(1, ramp + dt / AUTO_RAMP);
+        // ease-in-out 的渐入曲线，让转动从静止柔和加速
+        const eased = ramp * ramp * (3 - 2 * ramp);
+        ring.rot += dt * AUTO_SPEED * eased;
         layoutRing();
+      } else {
+        ramp = 0;
       }
       ring.loop = requestAnimationFrame(frame);
     };
@@ -253,9 +260,9 @@
         return;
       }
       // 惯性：按松手速度多转几张，再吸附到整数位（立体缓动）
-      const fling = -velocity * 7;
+      const fling = Math.max(-6, Math.min(6, -velocity * 4.5));
       const target = Math.round(ring.rot + fling);
-      animateRotTo(target, 680);
+      animateRotTo(target, 760);
     };
     area.addEventListener('pointerup', finish);
     area.addEventListener('pointercancel', () => {
