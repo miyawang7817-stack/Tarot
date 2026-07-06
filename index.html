@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>塔罗占卜 · 探索你的命运</title>
+  <meta name="description" content="纯前端塔罗牌抽卡占卜网站：5 种经典牌阵、3D 翻牌动画、78 张牌正逆位中文解读" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔮</text></svg>" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="stars" aria-hidden="true"></div>
+
+  <header class="app-header">
+    <button class="brand" id="brand-btn" title="回到首页">
+      <span class="brand-icon">🔮</span>
+      <span class="brand-name">塔罗占卜</span>
+    </button>
+    <p class="brand-slogan">探索你的命运 · 倾听内心声音</p>
+  </header>
+
+  <main id="app">
+
+    <!-- 首页：选择牌阵 -->
+    <section id="view-home" class="view">
+      <div class="hero">
+        <h1>今天，想问点什么？</h1>
+        <p class="hero-sub">静下心来，在心中默念你的问题，然后选择一个牌阵开始占卜</p>
+        <input
+          id="question-input"
+          class="question-input"
+          type="text"
+          maxlength="60"
+          placeholder="（可选）写下你想占卜的问题，例如：我最近的事业运势如何？"
+        />
+      </div>
+      <div class="spread-grid" id="spread-grid"></div>
+    </section>
+
+    <!-- 抽牌页：洗牌 + 扇形选牌 -->
+    <section id="view-draw" class="view hidden">
+      <div class="draw-header">
+        <h2 id="draw-title"></h2>
+        <p id="draw-progress" class="draw-progress"></p>
+      </div>
+      <div class="stack-area">
+        <div class="stack" id="stack"></div>
+      </div>
+      <p class="stack-hint">点击或向上滑动抽牌 ✦ 左右滑动跳过，换下一张</p>
+      <div class="drawn-tray" id="drawn-tray"></div>
+      <div class="draw-actions">
+        <button class="btn btn-ghost" id="btn-reshuffle">重新洗牌</button>
+        <button class="btn btn-ghost" id="btn-back-home">返回牌阵选择</button>
+      </div>
+    </section>
+
+    <!-- 解读页：翻牌 + 牌义 -->
+    <section id="view-reading" class="view hidden">
+      <div class="reading-header">
+        <h2 id="reading-title"></h2>
+        <p id="reading-question" class="reading-question hidden"></p>
+        <p class="reading-hint" id="reading-hint">点击卡牌，逐张翻开你的命运之牌</p>
+      </div>
+      <div class="board" id="board"></div>
+      <div class="reading-actions">
+        <button class="btn btn-gold" id="btn-flip-all">✨ 全部翻开</button>
+        <button class="btn btn-ghost" id="btn-restart">重新占卜</button>
+      </div>
+      <div class="interpretations" id="interpretations"></div>
+    </section>
+
+  </main>
+
+  <footer class="app-footer">
+    <p>塔罗牌指引方向，选择权始终在你手中 ✦</p>
+    <p class="credit">牌面数据与像素画作源自 <a href="https://github.com/Lurell/tarot-vibecoding" target="_blank" rel="noopener">tarot-vibecoding</a>（MIT License）</p>
+  </footer>
+
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
