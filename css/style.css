@@ -221,7 +221,21 @@ main, header, footer { position: relative; z-index: 1; }
   will-change: transform;
   backface-visibility: hidden;
 }
-.ring-card.snapping { transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1), filter 0.4s, opacity 0.3s; }
+/* 流光：随旋转角在卡面上扫过的高光反射 */
+.card-shine {
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  background: linear-gradient(105deg,
+    transparent 34%,
+    rgba(248, 230, 174, var(--shine-o, 0)) 50%,
+    rgba(255, 255, 255, calc(var(--shine-o, 0) * 0.55)) 53%,
+    transparent 68%);
+  background-size: 240% 100%;
+  background-position-x: var(--shine-x, 50%);
+}
 .ring-card.center .card-back {
   box-shadow:
     inset 0 0 0 3px #0b0812, inset 0 0 0 4px rgba(227, 196, 110, 0.4),
