@@ -43,10 +43,21 @@
         <h2 id="draw-title"></h2>
         <p id="draw-progress" class="draw-progress"></p>
       </div>
-      <div class="stack-area">
-        <div class="stack" id="stack"></div>
+      <div class="ring-area" id="ring-area">
+        <div class="ring-stage" id="ring-stage"></div>
+        <div class="orbit" aria-hidden="true">
+          <div class="orbit-inner">
+            <span class="orbit-ellipse"></span>
+            <span class="orbit-comet"></span>
+            <span class="orbit-comet slow"></span>
+          </div>
+          <span class="orbit-spark sp1"></span>
+          <span class="orbit-spark sp2"></span>
+          <span class="orbit-spark sp3"></span>
+          <span class="orbit-glow"></span>
+        </div>
       </div>
-      <p class="stack-hint">点击或向上滑动抽牌 ✦ 左右滑动跳过，换下一张</p>
+      <p class="stack-hint">左右拖动，转动命运牌环 ✦ 点击中间的牌抽取</p>
       <div class="drawn-tray" id="drawn-tray"></div>
       <div class="draw-actions">
         <button class="btn btn-ghost" id="btn-reshuffle">重新洗牌</button>

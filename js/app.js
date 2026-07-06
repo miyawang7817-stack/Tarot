@@ -69,114 +69,215 @@
     });
   }
 
-  /* ---------- 抽牌页：3D 牌堆 + 拖拽交互 ---------- */
+  /* ---------- 抽牌页：3D 命运牌环 ----------
+     牌沿星轨排成环，左右拖动旋转（带惯性吸附），点击中间的牌将其抽起 */
 
-  const STACK_DEPTH = 7;   // 牌堆可见层数
-  let drawLocked = false;  // 飞出动画期间锁定操作
+  const VISIBLE_STEPS = 3.6; // 两侧各可见约 3 张
+  let ring = {
+    rot: 0,          // 当前旋转量（单位：张）
+    cards: [],       // { entry, el }
+    locked: false,   // 抽牌动画期间锁定
+    anim: null,      // 吸附动画的 rAF id
+  };
 
   function startDraw(spread) {
     state.spread = spread;
     state.question = $('#question-input').value.trim();
     state.picked = [];
     state.deck = freshShuffledDeck();
-    drawLocked = false;
+    ring.rot = 0;
+    ring.locked = false;
     $('#draw-title').textContent = spread.nameZh;
-    renderStack(true);
+    buildRing(true);
     renderTray();
     updateDrawProgress();
     showView('draw');
   }
 
-  function renderStack(withShuffleAnim) {
-    const stack = $('#stack');
-    stack.innerHTML = '';
-    const visible = Math.min(state.deck.length, STACK_DEPTH);
-    for (let i = visible - 1; i >= 0; i--) {
-      const el = document.createElement('button');
-      el.className = 'stack-card' + (i === 0 ? ' top' : '') + (withShuffleAnim ? ' shuffling' : '');
-      el.style.setProperty('--i', i);
-      el.style.zIndex = STACK_DEPTH - i;
-      if (withShuffleAnim) el.style.animationDelay = (i * 70) + 'ms';
-      el.setAttribute('aria-label', i === 0 ? '牌堆顶：点击或上滑抽牌' : '牌堆中的牌');
-      el.innerHTML = '<span class="card-back"></span>';
-      stack.appendChild(el);
-    }
-    attachDrag(stack.querySelector('.stack-card.top'));
-  }
-
-  /* 顶层卡片：跟手拖拽。上滑 = 抽牌；左右滑 = 跳过；轻点 = 抽牌 */
-  function attachDrag(card) {
-    if (!card) return;
-    let startX = 0, startY = 0, dx = 0, dy = 0, tracking = false;
-
-    card.addEventListener('pointerdown', (e) => {
-      if (drawLocked) return;
-      tracking = true;
-      startX = e.clientX;
-      startY = e.clientY;
-      dx = dy = 0;
-      card.setPointerCapture(e.pointerId);
-      card.classList.add('dragging');
-    });
-
-    card.addEventListener('pointermove', (e) => {
-      if (!tracking) return;
-      dx = e.clientX - startX;
-      dy = e.clientY - startY;
-      const rot = dx * 0.07;
-      card.style.transform =
-        `translate(${dx}px, ${dy}px) rotate(${rot}deg)`;
-    });
-
-    const finish = () => {
-      if (!tracking) return;
-      tracking = false;
-      card.classList.remove('dragging');
-      const dist = Math.hypot(dx, dy);
-      if (dist < 8) {                    // 轻点：抽牌
-        drawTop(card);
-      } else if (dy < -90 && Math.abs(dy) > Math.abs(dx)) {  // 上滑：抽牌
-        drawTop(card);
-      } else if (Math.abs(dx) > 110) {   // 左右滑：跳过这张
-        skipTop(card, dx > 0 ? 1 : -1);
-      } else {                           // 回弹
-        card.style.transform = '';
-      }
+  function ringGeom() {
+    const mobile = window.innerWidth < 720;
+    return {
+      spacing: mobile ? 96 : 150,   // 相邻牌横向间距
+      depth: mobile ? 90 : 130,     // 每级纵深
+      angle: mobile ? 30 : 27,      // 每级偏转角
     };
-    card.addEventListener('pointerup', finish);
-    card.addEventListener('pointercancel', finish);
   }
 
-  function drawTop(card) {
-    if (drawLocked || state.picked.length >= state.spread.positions.length) return;
-    drawLocked = true;
-    card.style.transform = '';
-    card.classList.add('fly-up');
-    const entry = state.deck.shift();
-    state.picked.push(entry);
+  function buildRing(deal) {
+    const stage = $('#ring-stage');
+    stage.innerHTML = '';
+    cancelAnimationFrame(ring.anim);
+    ring.cards = state.deck.map((entry, i) => {
+      const el = document.createElement('button');
+      el.className = 'ring-card' + (deal ? ' dealing' : '');
+      el.dataset.idx = i;
+      if (deal) el.style.animationDelay = (Math.min(Math.abs(i), 5) * 90) + 'ms';
+      el.setAttribute('aria-label', '牌环中的牌');
+      el.innerHTML = '<span class="card-back"></span>';
+      stage.appendChild(el);
+      return { entry, el };
+    });
+    layoutRing();
+  }
+
+  /* 把每张牌摆到环上：中间的最大最亮，两侧向后透视排开 */
+  function layoutRing() {
+    const n = ring.cards.length;
+    if (!n) return;
+    const g = ringGeom();
+    ring.cards.forEach((c, i) => {
+      let steps = (((i - ring.rot) % n) + n) % n;
+      if (steps > n / 2) steps -= n;
+      const el = c.el;
+      if (Math.abs(steps) > VISIBLE_STEPS) {
+        el.style.opacity = '0';
+        el.style.pointerEvents = 'none';
+        el.style.transform = 'translateX(' + (steps > 0 ? 1 : -1) * g.spacing * 4 + 'px) translateZ(-620px)';
+        el.classList.remove('center');
+        return;
+      }
+      const clamped = Math.max(-3, Math.min(3, steps));
+      const x = clamped * g.spacing;
+      const z = -Math.abs(clamped) * g.depth;
+      const ry = -clamped * g.angle;
+      el.style.opacity = String(1 - Math.abs(steps) * 0.13);
+      el.style.pointerEvents = 'auto';
+      el.style.transform = `translateX(${x}px) translateZ(${z}px) rotateY(${ry}deg)`;
+      el.style.zIndex = String(100 - Math.round(Math.abs(steps) * 10));
+      el.style.filter = `brightness(${1 - Math.abs(steps) * 0.14})`;
+      el.classList.toggle('center', Math.abs(steps) < 0.4);
+    });
+  }
+
+  /* 吸附/转动到指定旋转量（缓动动画） */
+  function animateRotTo(target, duration = 420, done) {
+    cancelAnimationFrame(ring.anim);
+    const from = ring.rot;
+    const delta = target - from;
+    if (Math.abs(delta) < 0.001) { ring.rot = target; layoutRing(); done && done(); return; }
+    const t0 = performance.now();
+    const ease = (t) => 1 - Math.pow(1 - t, 3); // easeOutCubic
+    const tick = (now) => {
+      const t = Math.min(1, (now - t0) / duration);
+      ring.rot = from + delta * ease(t);
+      layoutRing();
+      if (t < 1) ring.anim = requestAnimationFrame(tick);
+      else { done && done(); }
+    };
+    ring.anim = requestAnimationFrame(tick);
+  }
+
+  /* 拖拽旋转 + 惯性 + 轻点抽牌 */
+  function setupRingInput() {
+    const area = $('#ring-area');
+    const g = () => ringGeom();
+    let dragging = false, startX = 0, lastX = 0, lastT = 0, velocity = 0, startRot = 0, moved = 0;
+
+    area.addEventListener('pointerdown', (e) => {
+      if (ring.locked) return;
+      dragging = true;
+      moved = 0;
+      startX = lastX = e.clientX;
+      lastT = performance.now();
+      velocity = 0;
+      startRot = ring.rot;
+      cancelAnimationFrame(ring.anim);
+      area.classList.add('grabbing');
+      area.setPointerCapture(e.pointerId);
+    });
+
+    area.addEventListener('pointermove', (e) => {
+      if (!dragging) return;
+      const now = performance.now();
+      const dx = e.clientX - lastX;
+      velocity = dx / Math.max(1, now - lastT); // px/ms
+      lastX = e.clientX;
+      lastT = now;
+      moved = Math.max(moved, Math.abs(e.clientX - startX));
+      ring.rot = startRot - (e.clientX - startX) / g().spacing;
+      layoutRing();
+    });
+
+    const finish = (e) => {
+      if (!dragging) return;
+      dragging = false;
+      area.classList.remove('grabbing');
+
+      if (moved < 8) { // 轻点：按坐标找被点的牌（pointer capture 会改写 e.target）
+        const hit = document.elementFromPoint(e.clientX, e.clientY);
+        const target = hit && hit.closest('.ring-card');
+        if (target) handleRingTap(target);
+        else animateRotTo(Math.round(ring.rot));
+        return;
+      }
+      // 惯性：按松手速度多转几张，再吸附到整数位
+      const fling = -velocity * 6;
+      const target = Math.round(ring.rot + fling);
+      animateRotTo(target, 520);
+    };
+    area.addEventListener('pointerup', finish);
+    area.addEventListener('pointercancel', () => {
+      dragging = false;
+      area.classList.remove('grabbing');
+      animateRotTo(Math.round(ring.rot));
+    });
+
+    // 键盘可达性：左右转动，回车抽中间的牌
+    area.tabIndex = 0;
+    area.addEventListener('keydown', (e) => {
+      if (ring.locked) return;
+      if (e.key === 'ArrowLeft') { e.preventDefault(); animateRotTo(Math.round(ring.rot) - 1); }
+      if (e.key === 'ArrowRight') { e.preventDefault(); animateRotTo(Math.round(ring.rot) + 1); }
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        const c = ring.cards[centerIndex()];
+        if (c) drawRingCard(c);
+      }
+    });
+  }
+
+  function centerIndex() {
+    const n = ring.cards.length;
+    return ((Math.round(ring.rot) % n) + n) % n;
+  }
+
+  function handleRingTap(el) {
+    const i = Number(el.dataset.idx);
+    const n = ring.cards.length;
+    let steps = (((i - ring.rot) % n) + n) % n;
+    if (steps > n / 2) steps -= n;
+    if (Math.abs(steps) < 0.4) {
+      drawRingCard(ring.cards[i]);       // 点中间：抽这张
+    } else {
+      animateRotTo(ring.rot + steps);    // 点旁边：把它转到中间
+    }
+  }
+
+  function drawRingCard(card) {
+    if (ring.locked || state.picked.length >= state.spread.positions.length) return;
+    ring.locked = true;
+    const idx = Number(card.el.dataset.idx);
+
+    card.el.classList.add('rise');       // 中间的牌升起
+    ring.cards.forEach((c) => {          // 其余的牌暂时隐去
+      if (c !== card) c.el.classList.add('fade-away');
+    });
+
+    state.picked.push(card.entry);
+    state.deck.splice(idx, 1);
+
     setTimeout(() => {
-      renderStack(false);
       renderTray();
       updateDrawProgress();
-      drawLocked = false;
       if (state.picked.length === state.spread.positions.length) {
-        setTimeout(startReading, 700);
+        setTimeout(startReading, 500);
+        return;
       }
-    }, 380);
-  }
-
-  function skipTop(card, dir) {
-    if (drawLocked) return;
-    drawLocked = true;
-    card.style.transform = '';
-    card.style.setProperty('--fly-x', (dir * 72) + 'vw');
-    card.style.setProperty('--fly-rot', (dir * 24) + 'deg');
-    card.classList.add('fly-side');
-    state.deck.push(state.deck.shift()); // 放回牌堆底部
-    setTimeout(() => {
-      renderStack(false);
-      drawLocked = false;
-    }, 320);
+      // 抽走的是中间那张：让原本紧随其后的牌接到中间
+      ring.rot = state.deck.length ? idx % state.deck.length : 0;
+      buildRing(true);                   // 牌环重新聚拢
+      ring.locked = false;
+    }, 620);
   }
 
   function renderTray() {
@@ -307,10 +408,14 @@
   $('#btn-reshuffle').addEventListener('click', () => {
     state.picked = [];
     state.deck = freshShuffledDeck();
-    drawLocked = false;
-    renderStack(true);
+    ring.rot = 0;
+    ring.locked = false;
+    buildRing(true);
     renderTray();
     updateDrawProgress();
+  });
+  window.addEventListener('resize', () => {
+    if (!views.draw.classList.contains('hidden')) layoutRing();
   });
   $('#btn-flip-all').addEventListener('click', flipAll);
   $('#btn-restart').addEventListener('click', () => {
@@ -319,4 +424,5 @@
   });
 
   renderSpreadGrid();
+  setupRingInput();
 })();

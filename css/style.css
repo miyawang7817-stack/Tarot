@@ -186,63 +186,142 @@ main, header, footer { position: relative; z-index: 1; }
 .draw-progress { margin-top: 10px; color: var(--text-dim); font-size: 14px; letter-spacing: 1px; min-height: 22px; }
 .draw-progress b { color: var(--gold); font-size: 16px; }
 
-/* 居中 3D 牌堆：顶层卡片跟手拖拽，滑走露出下一张 */
-.stack-area {
-  position: relative;
-  height: clamp(280px, 42vh, 360px);
-  margin: 18px auto 4px;
-  perspective: 1100px;
-  touch-action: none;
-}
-.stack {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: var(--card-w2);
-  height: var(--card-h2);
-  transform: translate(-50%, -50%);
-  transform-style: preserve-3d;
-}
+/* 3D 命运牌环：牌立在发光星轨上，左右拖动旋转，点击中间的牌抽取 */
 :root { --card-w2: 168px; --card-h2: 280px; }
 
-.stack-card {
+.ring-area {
+  position: relative;
+  height: clamp(320px, 46vh, 420px);
+  margin: 10px auto 0;
+  max-width: 900px;
+  perspective: 1200px;
+  touch-action: none;
+  cursor: grab;
+  user-select: none;
+}
+.ring-area.grabbing { cursor: grabbing; }
+.ring-stage {
   position: absolute;
-  inset: 0;
+  left: 50%;
+  top: calc(50% - 26px);
+  width: 0;
+  height: 0;
+  transform-style: preserve-3d;
+}
+.ring-card {
+  position: absolute;
+  left: calc(var(--card-w2) / -2);
+  top: calc(var(--card-h2) / -2);
+  width: var(--card-w2);
+  height: var(--card-h2);
   border: none;
   background: none;
   padding: 0;
-  cursor: grab;
-  transform:
-    translateY(calc(var(--i) * -10px))
-    translateZ(calc(var(--i) * -46px))
-    rotate(calc(var(--i) * 1.1deg));
-  filter: brightness(calc(1 - var(--i) * 0.09));
-  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1), filter 0.45s, opacity 0.35s;
+  cursor: pointer;
   will-change: transform;
+  backface-visibility: hidden;
 }
-.stack-card:not(.top) { pointer-events: none; }
-.stack-card.top:active { cursor: grabbing; }
-.stack-card.top:hover .card-back {
+.ring-card.snapping { transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1), filter 0.4s, opacity 0.3s; }
+.ring-card.center .card-back {
   box-shadow:
-    inset 0 0 0 4px #17102f, inset 0 0 0 5px rgba(227, 196, 110, 0.35),
-    0 10px 30px rgba(0, 0, 0, 0.55), 0 0 26px rgba(227, 196, 110, 0.35);
+    inset 0 0 0 3px #0b0812, inset 0 0 0 4px rgba(227, 196, 110, 0.4),
+    0 14px 38px rgba(0, 0, 0, 0.6), 0 0 34px rgba(227, 196, 110, 0.4);
 }
-.stack-card.dragging { transition: none; }
-.stack-card.fly-up {
-  transform: translateY(-64vh) rotate(var(--fly-rot, -14deg)) scale(0.72);
+.ring-card.rise {
+  transition: transform 0.6s cubic-bezier(0.3, 0.9, 0.3, 1), opacity 0.45s 0.25s;
+  transform: translateY(-46vh) scale(1.12) !important;
   opacity: 0;
+  z-index: 200 !important;
 }
-.stack-card.fly-side {
-  transform: translateX(var(--fly-x, 70vw)) translateY(-30px) rotate(var(--fly-rot, 26deg));
-  opacity: 0;
+.ring-card.fade-away {
+  transition: transform 0.5s ease, opacity 0.4s;
+  opacity: 0 !important;
 }
-.stack-card.shuffling {
-  animation: stack-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+.ring-card.dealing {
+  animation: ring-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) backwards;
 }
-@keyframes stack-in {
-  from { opacity: 0; transform: translateY(-46vh) rotate(10deg) scale(0.7); }
+@keyframes ring-in {
+  from { opacity: 0; }
 }
-.stack-card .card-back { font-size: 40px; }
+
+/* 发光星轨 */
+.orbit {
+  position: absolute;
+  left: 50%;
+  bottom: 2px;
+  width: min(470px, 92vw);
+  height: 140px;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.orbit-inner {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(470px, 92vw);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%) scaleY(0.29);
+}
+.orbit-ellipse {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1.5px solid rgba(216, 180, 95, 0.5);
+  box-shadow:
+    0 0 22px rgba(227, 196, 110, 0.28),
+    inset 0 0 34px rgba(227, 196, 110, 0.14);
+}
+.orbit-ellipse::before {
+  content: '';
+  position: absolute;
+  inset: 14px;
+  border-radius: 50%;
+  border: 1px dashed rgba(216, 180, 95, 0.3);
+}
+.orbit-comet {
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg,
+    transparent 0 72%,
+    rgba(245, 221, 154, 0.02) 78%,
+    rgba(245, 221, 154, 0.85) 92%,
+    transparent 96%);
+  -webkit-mask: radial-gradient(circle, transparent 0 61%, #000 62.5%, #000 66%, transparent 67%);
+  mask: radial-gradient(circle, transparent 0 61%, #000 62.5%, #000 66%, transparent 67%);
+  animation: orbit-spin 5.5s linear infinite;
+}
+.orbit-comet.slow {
+  animation-duration: 9s;
+  animation-direction: reverse;
+  opacity: 0.55;
+}
+@keyframes orbit-spin { to { transform: rotate(360deg); } }
+.orbit-spark {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--gold-bright);
+  box-shadow: 0 0 8px 2px rgba(245, 221, 154, 0.7);
+  animation: twinkle 2.4s ease-in-out infinite alternate;
+}
+.orbit-spark.sp1 { left: 12%; top: 62%; }
+.orbit-spark.sp2 { left: 84%; top: 40%; animation-delay: 0.8s; }
+.orbit-spark.sp3 { left: 52%; top: 88%; animation-delay: 1.5s; }
+.orbit-glow {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 60%;
+  height: 70%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(ellipse at center, rgba(120, 80, 220, 0.28), rgba(227, 196, 110, 0.08) 55%, transparent 75%);
+  filter: blur(6px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .orbit-comet, .orbit-spark { animation: none; }
+}
 
 .stack-hint {
   text-align: center;
@@ -296,25 +375,15 @@ main, header, footer { position: relative; z-index: 1; }
 }
 .tray-slot.filled .tray-label { color: var(--gold); }
 
-/* 牌背（纯 CSS 绘制） */
+/* 牌背（黑金日月徽章，SVG 内联绘制） */
 .card-back {
+  display: block;
   width: 100%; height: 100%;
-  border-radius: 10px;
-  border: 2px solid rgba(227, 196, 110, 0.65);
-  background:
-    radial-gradient(circle at 50% 38%, rgba(227, 196, 110, 0.22) 0 14%, transparent 15%),
-    repeating-linear-gradient(45deg, rgba(168, 130, 255, 0.10) 0 6px, transparent 6px 12px),
-    linear-gradient(160deg, #2a1d55 0%, #17102f 100%);
-  box-shadow: inset 0 0 0 4px #17102f, inset 0 0 0 5px rgba(227, 196, 110, 0.35), 0 6px 16px rgba(0, 0, 0, 0.45);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--gold);
-  font-size: 26px;
-  text-shadow: 0 0 12px rgba(227, 196, 110, 0.8);
+  border-radius: 8px;
+  background: #0b0812 url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 320 520%22%3E%3Cdefs%3E%3CradialGradient id=%22sun%22 cx=%2250%25%22 cy=%2242%25%22 r=%2270%25%22%3E%3Cstop offset=%220%25%22 stop-color=%22%23f8e6ae%22/%3E%3Cstop offset=%2255%25%22 stop-color=%22%23dcb45f%22/%3E%3Cstop offset=%22100%25%22 stop-color=%22%239a7226%22/%3E%3C/radialGradient%3E%3Cpath id=%22dm%22 d=%22M0 -7 L4 0 L0 7 L-4 0 Z%22 fill=%22%23d8b45f%22/%3E%3Cg id=%22ray%22%3E%3Crect x=%22-1.6%22 y=%22-84%22 width=%223.2%22 height=%2226%22 rx=%221.6%22 fill=%22%23d8b45f%22/%3E%3C/g%3E%3C/defs%3E%3Crect width=%22320%22 height=%22520%22 rx=%2220%22 fill=%22%230b0812%22/%3E%3Crect x=%229%22 y=%229%22 width=%22302%22 height=%22502%22 rx=%2214%22 fill=%22none%22 stroke=%22%23d8b45f%22 stroke-width=%223%22/%3E%3Crect x=%2220%22 y=%2220%22 width=%22280%22 height=%22480%22 rx=%229%22 fill=%22none%22 stroke=%22%238f7031%22 stroke-width=%221.2%22/%3E%3Cuse href=%22%23dm%22 x=%2236%22 y=%2236%22/%3E%3Cuse href=%22%23dm%22 x=%22284%22 y=%2236%22/%3E%3Cuse href=%22%23dm%22 x=%2236%22 y=%22484%22/%3E%3Cuse href=%22%23dm%22 x=%22284%22 y=%22484%22/%3E%3Cg transform=%22translate(160 96)%22%3E%3Ccircle r=%229%22 fill=%22none%22 stroke=%22%23d8b45f%22 stroke-width=%221.5%22/%3E%3Ccircle cx=%22-30%22 cy=%220%22 r=%224%22 fill=%22%238f7031%22/%3E%3Ccircle cx=%2230%22 cy=%220%22 r=%224%22 fill=%22%238f7031%22/%3E%3Ccircle cx=%22-52%22 cy=%220%22 r=%222%22 fill=%22%23d8b45f%22/%3E%3Ccircle cx=%2252%22 cy=%220%22 r=%222%22 fill=%22%23d8b45f%22/%3E%3C/g%3E%3Cg transform=%22translate(160 260)%22%3E%3Ccircle r=%2297%22 fill=%22none%22 stroke=%22%238f7031%22 stroke-width=%221%22 opacity=%220.7%22/%3E%3Ccircle r=%2286%22 fill=%22none%22 stroke=%22%23d8b45f%22 stroke-width=%221.4%22 stroke-dasharray=%222 7%22/%3E%3Cg%3E%3Cuse href=%22%23ray%22/%3E%3Cuse href=%22%23ray%22 transform=%22rotate(30)%22/%3E%3Cuse href=%22%23ray%22 transform=%22rotate(60)%22/%3E%3Cuse href=%22%23ray%22 transform=%22rotate(90)%22/%3E%3Cuse href=%22%23ray%22 transform=%22rotate(120)%22/%3E%3Cuse href=%22%23ray%22 transform=%22rotate(150)%22/%3E%3Cuse href=%22%23ray%22 transform=%22rotate(180)%22/%3E%3Cuse href=%22%23ray%22 transform=%22rotate(210)%22/%3E%3Cuse href=%22%23ray%22 transform=%22rotate(240)%22/%3E%3Cuse href=%22%23ray%22 transform=%22rotate(270)%22/%3E%3Cuse href=%22%23ray%22 transform=%22rotate(300)%22/%3E%3Cuse href=%22%23ray%22 transform=%22rotate(330)%22/%3E%3C/g%3E%3Ccircle r=%2247%22 fill=%22url(%23sun)%22 stroke=%22%23f0d287%22 stroke-width=%222%22/%3E%3Ccircle r=%2247%22 fill=%22none%22 stroke=%22%235c421a%22 stroke-width=%220.8%22 opacity=%220.6%22/%3E%3Ccircle cx=%228%22 cy=%22-2%22 r=%2221%22 fill=%22%23f8e6ae%22/%3E%3Ccircle cx=%2217%22 cy=%22-7%22 r=%2219%22 fill=%22%23b98a2e%22/%3E%3Ccircle cx=%222%22 cy=%224%22 r=%222.6%22 fill=%22%235c421a%22/%3E%3Cuse href=%22%23dm%22 y=%22-118%22/%3E%3Cuse href=%22%23dm%22 y=%22118%22/%3E%3C/g%3E%3Cg transform=%22translate(160 430)%22%3E%3Cuse href=%22%23dm%22 transform=%22scale(0.8)%22/%3E%3Ccircle cx=%22-26%22 cy=%220%22 r=%222.4%22 fill=%22%23d8b45f%22/%3E%3Ccircle cx=%2226%22 cy=%220%22 r=%222.4%22 fill=%22%23d8b45f%22/%3E%3C/g%3E%3Cg fill=%22%23d8b45f%22 opacity=%220.5%22%3E%3Ccircle cx=%2260%22 cy=%22150%22 r=%221.6%22/%3E%3Ccircle cx=%22262%22 cy=%22132%22 r=%221.4%22/%3E%3Ccircle cx=%2270%22 cy=%22392%22 r=%221.4%22/%3E%3Ccircle cx=%22252%22 cy=%22378%22 r=%221.6%22/%3E%3Ccircle cx=%22160%22 cy=%22176%22 r=%221.2%22/%3E%3Ccircle cx=%2292%22 cy=%22330%22 r=%221.2%22/%3E%3Ccircle cx=%22230%22 cy=%22320%22 r=%221.2%22/%3E%3C/g%3E%3C/svg%3E") center / 100% 100% no-repeat;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.55);
   user-select: none;
 }
-.card-back::before { content: '✦'; }
 
 .draw-actions, .reading-actions {
   display: flex;
