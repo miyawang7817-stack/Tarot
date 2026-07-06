@@ -12,7 +12,6 @@
 
   const state = {
     spread: null,      // 当前牌阵模板
-    question: '',      // 用户的问题
     deck: [],          // 洗好的牌（含正逆位）
     picked: [],        // 已抽出的牌，按牌阵位置顺序
     flippedCount: 0,
@@ -93,7 +92,6 @@
 
   function startDraw(spread) {
     state.spread = spread;
-    state.question = $('#question-input').value.trim();
     state.picked = [];
     state.deck = freshShuffledDeck();
     ring.rot = 0;
@@ -360,9 +358,6 @@
   function startReading() {
     state.flippedCount = 0;
     $('#reading-title').textContent = state.spread.nameZh;
-    const q = $('#reading-question');
-    q.textContent = state.question;
-    q.classList.toggle('hidden', !state.question);
     $('#reading-hint').textContent = '点击卡牌，逐张翻开你的命运之牌';
     $('#btn-flip-all').disabled = false;
     $('#interpretations').innerHTML = '';
@@ -373,8 +368,6 @@
   function renderBoard() {
     const board = $('#board');
     board.className = 'board';
-    if (state.spread.layout === 'cross') board.classList.add('layout-cross');
-    if (state.spread.layout === 'celtic') board.classList.add('layout-celtic');
     board.innerHTML = '';
 
     state.spread.positions.forEach((pos, i) => {
@@ -472,7 +465,6 @@
   });
   $('#btn-flip-all').addEventListener('click', flipAll);
   $('#btn-restart').addEventListener('click', () => {
-    $('#question-input').value = '';
     showView('home');
   });
 
