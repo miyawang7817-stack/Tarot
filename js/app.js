@@ -124,7 +124,7 @@
       el.dataset.idx = i;
       if (deal) el.style.animationDelay = (Math.min(Math.abs(i), 5) * 90) + 'ms';
       el.setAttribute('aria-label', '牌环中的牌');
-      el.innerHTML = '<span class="card-back"></span><span class="card-shine"></span>';
+      el.innerHTML = '<span class="card-back"></span><span class="card-dim"></span><span class="card-shine"></span>';
       stage.appendChild(el);
       return { entry, el };
     });
@@ -163,15 +163,20 @@
       const edge = Math.abs(theta) / VIEW_DEG;    // 0 中间 → 1 边缘
       el.style.opacity = String(1 - Math.pow(edge, 2.2));
       el.style.pointerEvents = 'auto';
+      // 前后遮挡由 preserve-3d 深度排序完成，无需 zIndex
       el.style.transform = `translateX(${x.toFixed(1)}px) translateZ(${z.toFixed(1)}px) rotateY(${theta.toFixed(2)}deg)`;
-      el.style.zIndex = String(1000 + Math.round(z));
-      // 光影：正对最亮，转到侧面渐暗
-      el.style.filter = `brightness(${(0.52 + 0.48 * Math.cos(rad)).toFixed(3)})`;
-      // 流光：随旋转角在卡面上扫过的高光
-      el.style.setProperty('--shine-x', (50 - theta * 1.6).toFixed(1) + '%');
-      el.style.setProperty('--shine-o', String((0.5 * Math.max(0, 1 - Math.abs(theta) / 70)).toFixed(3)));
+      // 光影：黑色遮罩的 opacity 表达明暗（合成器友好，替代 filter）
+      el.style.setProperty('--dim', (0.48 * (1 - Math.cos(rad))).toFixed(3));
+      // 流光：高光条随角度平移扫过卡面
+      el.style.setProperty('--shine-t', (40 - theta * 2.7).toFixed(1) + '%');
+      el.style.setProperty('--shine-o', String(Math.max(0, 1 - Math.abs(theta) / 70).toFixed(3)));
       el.classList.toggle('center', Math.abs(steps) < 0.4);
     });
+  }
+
+  /* 请求在下一帧重排牌环（所有旋转路径共用主循环渲染，避免一帧多次布局） */
+  function requestLayout() {
+    ring.dirty = true;
   }
 
   /* 吸附/转动到指定旋转量（立体缓动） */
@@ -186,7 +191,7 @@
     const tick = (now) => {
       const t = Math.min(1, (now - t0) / duration);
       ring.rot = from + delta * ease(t);
-      layoutRing();
+      requestLayout();
       if (t < 1) ring.anim = requestAnimationFrame(tick);
       else { ring.snapping = false; ring.lastTouch = performance.now(); done && done(); }
     };
@@ -209,9 +214,13 @@
         // ease-in-out 的渐入曲线，让转动从静止柔和加速
         const eased = ramp * ramp * (3 - 2 * ramp);
         ring.rot += dt * AUTO_SPEED * eased;
-        layoutRing();
-      } else {
+        ring.dirty = true;
+      } else if (!idle) {
         ramp = 0;
+      }
+      if (ring.dirty) {
+        ring.dirty = false;
+        layoutRing();
       }
       ring.loop = requestAnimationFrame(frame);
     };
@@ -250,7 +259,7 @@
       moved = Math.max(moved, Math.abs(e.clientX - startX));
       ring.rot = startRot - (e.clientX - startX) / pxPerStep();
       ring.lastTouch = now;
-      layoutRing();
+      requestLayout(); // 由主循环在下一帧统一渲染，与事件频率解耦
     });
 
     const finish = (e) => {
@@ -316,26 +325,31 @@
     const idx = Number(card.el.dataset.idx);
 
     card.el.classList.add('rise');       // 中间的牌升起
-    ring.cards.forEach((c) => {          // 其余的牌暂时隐去
-      if (c !== card) c.el.classList.add('fade-away');
-    });
-
     state.picked.push(card.entry);
     state.deck.splice(idx, 1);
+    ring.cards.splice(idx, 1);
+    ring.cards.forEach((c, i) => { c.el.dataset.idx = i; });
+    renderTray();
+    updateDrawProgress();
+
+    const finished = state.picked.length === state.spread.positions.length;
+
+    // 牌还在升起时，其余的牌就平滑合拢补位（不重建 DOM，无顿挫）
+    setTimeout(() => {
+      if (!finished && ring.cards.length) {
+        ring.cards.forEach((c) => { if (!c.hidden) c.el.classList.add('closing'); });
+        ring.rot = idx % ring.cards.length;
+        requestLayout();
+      }
+    }, 200);
 
     setTimeout(() => {
-      renderTray();
-      updateDrawProgress();
-      if (state.picked.length === state.spread.positions.length) {
-        setTimeout(startReading, 500);
-        return;
-      }
-      // 抽走的是中间那张：让原本紧随其后的牌接到中间
-      ring.rot = state.deck.length ? idx % state.deck.length : 0;
-      ring.lastTouch = performance.now();
-      buildRing(true);                   // 牌环重新聚拢
+      card.el.remove();
+      if (finished) { startReading(); return; }
+      ring.cards.forEach((c) => c.el.classList.remove('closing'));
+      ring.lastTouch = performance.now() - IDLE_DELAY + 900;
       ring.locked = false;
-    }, 620);
+    }, 700);
   }
 
   function renderTray() {
