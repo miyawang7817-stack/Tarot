@@ -68,202 +68,342 @@
     });
   }
 
-  /* ---------- 抽牌页：命运轮盘（角色制轮换） ----------
-     中间主牌 + 左右虚化小牌 + 背后一张；切换时位置 / 大小 / 模糊 / 透明度
-     在 650ms 内同步过渡；空闲时自动轮换；点中间的牌抽取 */
+  /* ---------- 抽牌页：命运轮盘（连续插值引擎） ----------
+     rot 为连续旋转量（单位：张）。每张牌按相对位置 rel = i - rot 在
+     「中间大 → 两侧虚化 → 纵深隐没」的轨道上连续插值；
+     拖动跟手、惯性滑行渐停、空闲匀速漂移，逐帧只写 transform/opacity */
 
-  const STEP_MS = 650;                   // 一次轮换的过渡时长
-  const AUTO_EVERY = 2600;               // 自动轮换间隔
-  const IDLE_DELAY = 2200;               // 交互后多久恢复自动轮换
+  const VISIBLE_REL = 3;                 // 相对位置超出 ±3 即隐藏
+  const AUTO_SPEED = 0.00032;            // 自动漂移速度（张/毫秒，约 3.1 秒一张）
+  const AUTO_RAMP = 900;                 // 漂移启动渐入（毫秒）
+  const IDLE_DELAY = 2000;               // 交互后多久恢复漂移
+  const FRICTION = 300;                  // 惯性摩擦时间常数（毫秒）
   const REDUCED_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   const car = {
-    active: 0,         // 当前主牌在牌堆中的下标
-    animating: false,  // 轮换过渡期间锁定
+    rot: 0,            // 连续旋转量
+    vel: 0,            // 惯性速度（张/毫秒）
+    inertia: false,    // 惯性滑行中
+    dragging: false,
+    snapping: false,   // 吸附动画中
     locked: false,     // 抽牌动画期间锁定
-    lastTouch: 0,      // 最近一次用户交互
-    lastAuto: 0,       // 最近一次自动轮换
+    lastTouch: 0,
+    dirty: false,
     loop: null,
-    cards: [],         // { entry, el }
+    anim: null,
+    cards: [],         // { entry, el, hidden }
+    ghost: null,       // { idx, w, delay } 抽牌后的收拢槽位
+    geom: null,
   };
 
   function startDraw(spread) {
     state.spread = spread;
     state.picked = [];
     state.deck = freshShuffledDeck();
-    car.active = 0;
+    car.rot = 0;
+    car.vel = 0;
+    car.inertia = false;
     car.locked = false;
-    car.animating = false;
-    car.lastTouch = performance.now();
-    car.lastAuto = performance.now();
+    car.snapping = false;
+    car.lastTouch = performance.now() - IDLE_DELAY + 1100;
     $('#draw-title').textContent = spread.nameZh;
+    showView('draw');          // 先显示视图，保证测量到真实尺寸
     buildCarousel(true);
     renderTray();
     updateDrawProgress();
-    showView('draw');
-    startAutoLoop();
+    startCarLoop();
+  }
+
+  function measureGeom() {
+    const area = $('#ring-area');
+    const W = area.clientWidth;
+    const H = area.clientHeight;
+    const mobile = window.innerWidth < 720;
+    car.geom = {
+      xoff1: W * (mobile ? 0.35 : 0.23),      // 侧牌横向偏移
+      y1: H * (mobile ? 0.27 : 0.25),         // 侧牌抬升
+      y2: H * 0.29,                           // 纵深位抬升
+      s1: mobile ? 0.37 : 0.435,              // 侧牌缩放
+      s2: mobile ? 0.3 : 0.337,               // 纵深缩放
+      pxPerStep: W * (mobile ? 0.35 : 0.23),  // 拖动一张牌对应的像素
+    };
   }
 
   function buildCarousel(deal) {
     const stage = $('#ring-stage');
     stage.innerHTML = '';
+    measureGeom();
     car.cards = state.deck.map((entry, i) => {
       const el = document.createElement('button');
-      el.className = 'car-card pos-hidden';
+      el.className = 'car-card' + (deal ? ' dealing' : '');
       el.dataset.idx = i;
       el.setAttribute('aria-label', '轮盘中的牌');
-      el.innerHTML = '<span class="card-back"></span><span class="card-shine"></span>';
+      el.innerHTML =
+        '<span class="card-back"></span>' +
+        '<span class="card-back card-blur"></span>' +
+        '<span class="card-dim"></span>' +
+        '<span class="card-glow"></span>' +
+        '<span class="card-shine"></span>';
+      if (deal) el.style.animationDelay = (i % 5) * 90 + 'ms';
       stage.appendChild(el);
-      return { entry, el };
+      return { entry, el, hidden: undefined };
     });
-    applyRoles();
-    if (deal) {
-      car.cards.forEach((c, i) => {
-        if (!c.el.classList.contains('pos-hidden')) {
-          c.el.classList.add('dealing');
-          c.el.style.animationDelay = (i % 5) * 80 + 'ms';
-        }
-      });
-      setTimeout(() => car.cards.forEach((c) => c.el.classList.remove('dealing')), 1200);
-    }
+    if (deal) setTimeout(() => car.cards.forEach((c) => c.el.classList.remove('dealing')), 1300);
+    layoutCarousel();
   }
 
-  function roleOf(rel) {
-    if (rel === 0) return 'pos-center';
-    if (rel === -1) return 'pos-left';
-    if (rel === 1) return 'pos-right';
-    if (rel === 2) return 'pos-back';
-    return 'pos-hidden';
+  /* 关键帧插值：a = [中间, 侧位, 纵深, 隐没] 四个锚点，r = |rel| */
+  function kp(a, r) {
+    const i = Math.min(2, Math.floor(r));
+    const t = Math.min(1, r - i);
+    return a[i] + (a[i + 1] - a[i]) * t;
   }
 
-  /* 按当前 active 给每张牌分配角色类，CSS 过渡自动完成动画 */
-  function applyRoles() {
+  function layoutCarousel() {
     const n = car.cards.length;
     if (!n) return;
+    const g = car.geom;
+    const ghost = car.ghost;
     car.cards.forEach((c, i) => {
-      let rel = (((i - car.active) % n) + n) % n;
-      if (rel > n / 2) rel -= n;
-      const role = roleOf(rel);
-      if (c.role !== role) {
-        c.role = role;
-        const keepDealing = c.el.classList.contains('dealing');
-        c.el.className = 'car-card ' + role + (keepDealing ? ' dealing' : '');
+      if (ghost && i === ghost.idx) return;   // 升起中的牌不参与排布
+      let eff = i;
+      if (ghost) {
+        // 幽灵槽位：被抽走的位置宽度从 1 收缩到 0，后面的牌被连续挤入
+        const di = (((i - ghost.idx) % n) + n) % n;
+        if (di > 0 && di < n / 2) eff = i - (1 - ghost.w);
       }
+      let rel = (((eff - car.rot) % n) + n) % n;
+      if (rel > n / 2) rel -= n;
+      const el = c.el;
+      const r = Math.abs(rel);
+      if (r > VISIBLE_REL) {
+        if (c.hidden !== true) {
+          c.hidden = true;
+          el.style.visibility = 'hidden';
+          el.style.pointerEvents = 'none';
+        }
+        return;
+      }
+      if (c.hidden !== false) {
+        c.hidden = false;
+        el.style.visibility = 'visible';
+        el.style.pointerEvents = 'auto';
+      }
+      const sign = rel < 0 ? -1 : 1;
+      const x = sign * kp([0, g.xoff1, 0, 0], r);
+      const y = kp([0, g.y1, g.y2, g.y2], r);
+      const s = kp([1, g.s1, g.s2, g.s2], r);
+      const fade = Math.max(0, Math.min(1, (2.9 - r) / 0.6));
+      el.style.transform =
+        `translateX(calc(-50% + ${x.toFixed(1)}px)) translateY(${(-y).toFixed(1)}px) scale(${s.toFixed(4)})`;
+      el.style.opacity = (kp([1, 0.9, 0.95, 0.95], r) * fade).toFixed(3);
+      el.style.zIndex = String(100 - Math.round(r * 10));
+      el.style.setProperty('--blur-o', kp([0, 0.65, 0.9, 1], r).toFixed(3));
+      el.style.setProperty('--dim', kp([0, 0.26, 0.44, 0.55], r).toFixed(3));
+      el.style.setProperty('--glow', Math.max(0, 1 - r * 1.8).toFixed(3));
+      el.style.setProperty('--shine-o', Math.max(0, 1 - r * 1.3).toFixed(3));
+      el.style.setProperty('--shine-t', (40 - rel * 180).toFixed(1) + '%');
     });
   }
 
-  function navigate(dir, isAuto) {
-    if (car.animating || car.locked) return;
-    const n = car.cards.length;
-    if (n < 2) return;
-    car.animating = true;
-    if (isAuto) car.lastAuto = performance.now();
-    else car.lastTouch = performance.now();
-    car.active = ((car.active + dir) % n + n) % n;
-    applyRoles();
-    setTimeout(() => { car.animating = false; }, STEP_MS);
+  /* 平滑吸附 / 转到目标位置 */
+  function animateRotTo(target, duration = 480, done) {
+    cancelAnimationFrame(car.anim);
+    car.inertia = false;
+    const from = car.rot;
+    const delta = target - from;
+    if (Math.abs(delta) < 0.001) { car.rot = target; car.snapping = false; car.dirty = true; done && done(); return; }
+    car.snapping = true;
+    const t0 = performance.now();
+    const ease = (t) => 1 - Math.pow(1 - t, 3);
+    const tick = (now) => {
+      const t = Math.min(1, (now - t0) / duration);
+      car.rot = from + delta * ease(t);
+      car.dirty = true;
+      if (t < 1) car.anim = requestAnimationFrame(tick);
+      else { car.snapping = false; car.lastTouch = performance.now(); done && done(); }
+    };
+    car.anim = requestAnimationFrame(tick);
   }
 
-  /* 空闲时自动轮换 */
-  function startAutoLoop() {
+  /* 主循环：惯性滑行 → 吸附；空闲时匀速漂移（带渐入） */
+  function startCarLoop() {
     if (car.loop) return;
+    let last = 0;
+    let ramp = 0;
     const frame = (now) => {
       if (views.draw.classList.contains('hidden')) { car.loop = null; return; }
-      const idle = !REDUCED_MOTION && !car.locked && !car.animating
-        && now - car.lastTouch > IDLE_DELAY
-        && now - car.lastAuto > AUTO_EVERY;
-      if (idle) navigate(1, true);
+      const dt = last ? Math.min(50, now - last) : 0;
+      last = now;
+
+      if (car.inertia && dt) {           // 惯性滑行，摩擦渐停
+        car.rot += car.vel * dt;
+        car.vel *= Math.exp(-dt / FRICTION);
+        car.dirty = true;
+        if (Math.abs(car.vel) < 0.0004) {
+          car.inertia = false;
+          animateRotTo(Math.round(car.rot), 360);
+        }
+      } else {
+        const idle = !car.dragging && !car.snapping && !car.locked && !car.inertia
+          && now - car.lastTouch > IDLE_DELAY && !REDUCED_MOTION;
+        if (idle && dt) {
+          ramp = Math.min(1, ramp + dt / AUTO_RAMP);
+          const eased = ramp * ramp * (3 - 2 * ramp);
+          car.rot += dt * AUTO_SPEED * eased;
+          car.dirty = true;
+        } else if (!idle) {
+          ramp = 0;
+        }
+      }
+      if (car.ghost && dt) {              // 幽灵槽位收拢
+        const gh = car.ghost;
+        if (gh.delay > 0) gh.delay -= dt;
+        else if (gh.w > 0) {
+          gh.w = Math.max(0, gh.w - dt / 380);
+          car.dirty = true;
+          if (gh.w === 0) finalizeGhost();
+        }
+      }
+      if (car.dirty) {
+        car.dirty = false;
+        layoutCarousel();
+      }
       car.loop = requestAnimationFrame(frame);
     };
     car.loop = requestAnimationFrame(frame);
   }
 
-  /* 滑动切换 + 点击选卡 */
+  /* 拖动跟手 + 惯性 + 轻点选卡 */
   function setupCarouselInput() {
     const area = $('#ring-area');
-    let sx = 0, tracking = false, moved = 0;
+    let sx = 0, lastX = 0, lastT = 0, startRot = 0, moved = 0;
 
     area.addEventListener('pointerdown', (e) => {
       if (car.locked) return;
-      tracking = true;
+      car.dragging = true;
+      car.inertia = false;
+      cancelAnimationFrame(car.anim);
+      car.snapping = false;
       moved = 0;
-      sx = e.clientX;
-      car.lastTouch = performance.now();
+      sx = lastX = e.clientX;
+      lastT = performance.now();
+      startRot = car.rot;
+      car.vel = 0;
+      car.lastTouch = lastT;
+      area.classList.add('grabbing');
+      area.setPointerCapture(e.pointerId);
     });
+
     area.addEventListener('pointermove', (e) => {
-      if (!tracking) return;
+      if (!car.dragging) return;
+      const now = performance.now();
+      const dx = e.clientX - lastX;
+      car.vel = -(dx / car.geom.pxPerStep) / Math.max(1, now - lastT);
+      lastX = e.clientX;
+      lastT = now;
       moved = Math.max(moved, Math.abs(e.clientX - sx));
+      car.rot = startRot - (e.clientX - sx) / car.geom.pxPerStep;
+      car.lastTouch = now;
+      car.dirty = true;
     });
+
     const finish = (e) => {
-      if (!tracking) return;
-      tracking = false;
+      if (!car.dragging) return;
+      car.dragging = false;
       car.lastTouch = performance.now();
-      const dx = e.clientX - sx;
-      if (Math.abs(dx) > 56) {           // 滑动：换一张
-        navigate(dx < 0 ? 1 : -1);
-        return;
-      }
-      if (moved < 8) {                   // 轻点：中间抽牌，两侧换位
+      area.classList.remove('grabbing');
+
+      if (moved < 8) {                   // 轻点：中间抽牌，两侧转过去
         const hit = document.elementFromPoint(e.clientX, e.clientY);
         const t = hit && hit.closest('.car-card');
-        if (!t) return;
-        if (t.classList.contains('pos-center')) drawCarCard(t);
-        else if (t.classList.contains('pos-left')) navigate(-1);
-        else navigate(1);
+        if (!t) { animateRotTo(Math.round(car.rot), 360); return; }
+        const i = Number(t.dataset.idx);
+        const n = car.cards.length;
+        let rel = (((i - car.rot) % n) + n) % n;
+        if (rel > n / 2) rel -= n;
+        if (Math.abs(rel) < 0.5) drawCarCard(t);
+        else animateRotTo(car.rot + rel, 520);
+        return;
+      }
+      // 惯性滑行；速度太小就直接吸附
+      if (Math.abs(car.vel) > 0.0006) {
+        car.vel = Math.max(-0.02, Math.min(0.02, car.vel));
+        car.inertia = true;
+      } else {
+        animateRotTo(Math.round(car.rot), 360);
       }
     };
     area.addEventListener('pointerup', finish);
-    area.addEventListener('pointercancel', () => { tracking = false; });
-
-    $('#nav-prev').addEventListener('click', () => navigate(-1));
-    $('#nav-next').addEventListener('click', () => navigate(1));
+    area.addEventListener('pointercancel', () => {
+      car.dragging = false;
+      area.classList.remove('grabbing');
+      animateRotTo(Math.round(car.rot), 360);
+    });
 
     // 键盘可达性
     area.tabIndex = 0;
     area.addEventListener('keydown', (e) => {
       if (car.locked) return;
       car.lastTouch = performance.now();
-      if (e.key === 'ArrowLeft') { e.preventDefault(); navigate(-1); }
-      if (e.key === 'ArrowRight') { e.preventDefault(); navigate(1); }
+      if (e.key === 'ArrowLeft') { e.preventDefault(); animateRotTo(Math.round(car.rot) - 1); }
+      if (e.key === 'ArrowRight') { e.preventDefault(); animateRotTo(Math.round(car.rot) + 1); }
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
-        const c = car.cards[car.active];
+        const n = car.cards.length;
+        const c = car.cards[((Math.round(car.rot) % n) + n) % n];
         if (c) drawCarCard(c.el);
+      }
+    });
+
+    window.addEventListener('resize', () => {
+      if (!views.draw.classList.contains('hidden')) {
+        measureGeom();
+        car.dirty = true;
       }
     });
   }
 
   function drawCarCard(el) {
-    if (car.locked || car.animating) return;
-    if (state.picked.length >= state.spread.positions.length) return;
+    if (car.locked || state.picked.length >= state.spread.positions.length) return;
     car.locked = true;
+    cancelAnimationFrame(car.anim);
+    car.snapping = false;
+    car.inertia = false;
     const idx = Number(el.dataset.idx);
     const cardObj = car.cards[idx];
 
     el.classList.add('rise');            // 主牌升起
     state.picked.push(cardObj.entry);
     state.deck.splice(idx, 1);
-    car.cards.splice(idx, 1);
-    car.cards.forEach((c, i) => { c.el.dataset.idx = i; });
     renderTray();
     updateDrawProgress();
 
     const finished = state.picked.length === state.spread.positions.length;
 
-    // 主牌还在升起时，右侧牌就平滑滑入中间补位
-    setTimeout(() => {
-      if (!finished && car.cards.length) {
-        car.active = idx % car.cards.length;
-        applyRoles();
-      }
-    }, 180);
+    if (!finished) {
+      animateRotTo(idx, 160);            // 先对正（漂移中可能有小数偏移）
+      car.ghost = { idx, w: 1, delay: 240 };
+    }
 
     setTimeout(() => {
       el.remove();
       if (finished) { startReading(); return; }
       car.locked = false;
-      car.lastTouch = performance.now();
-    }, 760);
+      car.lastTouch = performance.now() - IDLE_DELAY + 1200;
+    }, 780);
+  }
+
+  /* 幽灵槽位收拢完毕：真正移除该牌并归一化 rot */
+  function finalizeGhost() {
+    const gh = car.ghost;
+    if (!gh) return;
+    car.ghost = null;
+    car.cards.splice(gh.idx, 1);
+    car.cards.forEach((c, i) => { c.el.dataset.idx = i; });
+    const n = car.cards.length;
+    car.rot = n ? ((gh.idx % n) + n) % n : 0;
+    car.dirty = true;
   }
 
   function renderTray() {
@@ -389,9 +529,11 @@
   $('#btn-reshuffle').addEventListener('click', () => {
     state.picked = [];
     state.deck = freshShuffledDeck();
-    car.active = 0;
+    car.rot = 0;
+    car.vel = 0;
+    car.inertia = false;
     car.locked = false;
-    car.animating = false;
+    car.snapping = false;
     car.lastTouch = performance.now();
     buildCarousel(true);
     renderTray();

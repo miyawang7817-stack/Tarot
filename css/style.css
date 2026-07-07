@@ -153,8 +153,9 @@ main, header, footer { position: relative; z-index: 1; }
 .draw-progress { margin-top: 10px; color: var(--text-dim); font-size: 14px; letter-spacing: 1px; min-height: 22px; }
 .draw-progress b { color: var(--gold); font-size: 16px; }
 
-/* 命运轮盘：中间主牌 + 两侧虚化小牌 + 背后一张
-   切换时位置 / 大小 / 模糊 / 透明度在 650ms 内同步过渡（参考角色制轮换动效） */
+/* 命运轮盘（连续插值）：中间主牌 + 两侧虚化小牌 + 纵深隐没
+   拖动跟手、惯性滑行、空闲匀速漂移；模糊用预模糊图层交叉淡化，
+   逐帧只写 transform / opacity（纯合成器），保证满帧丝滑 */
 .ring-area {
   position: relative;
   height: clamp(380px, 54vh, 520px);
@@ -162,49 +163,54 @@ main, header, footer { position: relative; z-index: 1; }
   max-width: 900px;
   touch-action: pan-y;
   user-select: none;
+  cursor: grab;
 }
+.ring-area.grabbing { cursor: grabbing; }
 .ring-stage { position: absolute; inset: 0; }
 
 .car-card {
   position: absolute;
+  left: 50%;
+  bottom: 1%;
+  height: 92%;
   aspect-ratio: 3 / 5;
+  transform-origin: 50% 100%;
   transform: translateX(-50%);
   border: none;
   background: none;
   padding: 0;
   cursor: pointer;
-  transition:
-    left 650ms cubic-bezier(0.4, 0, 0.2, 1),
-    bottom 650ms cubic-bezier(0.4, 0, 0.2, 1),
-    height 650ms cubic-bezier(0.4, 0, 0.2, 1),
-    transform 650ms cubic-bezier(0.4, 0, 0.2, 1),
-    filter 650ms cubic-bezier(0.4, 0, 0.2, 1),
-    opacity 650ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 .car-card .card-back { border-radius: 12px; }
-
-.pos-center { left: 50%; bottom: 1%; height: 92%; z-index: 20; filter: none; opacity: 1; }
-.pos-center .card-back {
-  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.6), 0 0 42px rgba(227, 196, 110, 0.32);
+/* 预模糊图层：静态 blur 只光栅化一次，深度感靠 opacity 交叉淡化 */
+.card-blur {
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  filter: blur(3px);
+  opacity: var(--blur-o, 0);
+  box-shadow: none !important;
+  pointer-events: none;
 }
-.pos-left   { left: 27%; bottom: 26%; height: 40%; z-index: 10; filter: blur(2px) brightness(0.78); opacity: 0.85; }
-.pos-right  { left: 73%; bottom: 26%; height: 40%; z-index: 10; filter: blur(2px) brightness(0.78); opacity: 0.85; }
-.pos-back   { left: 50%; bottom: 30%; height: 31%; z-index: 5; filter: blur(4px) brightness(0.6); opacity: 0.95; }
-.pos-hidden {
-  left: 50%; bottom: 30%; height: 31%; z-index: 1;
-  filter: blur(6px); opacity: 0;
-  visibility: hidden; pointer-events: none;
-  transition:
-    left 650ms cubic-bezier(0.4, 0, 0.2, 1),
-    bottom 650ms cubic-bezier(0.4, 0, 0.2, 1),
-    height 650ms cubic-bezier(0.4, 0, 0.2, 1),
-    transform 650ms cubic-bezier(0.4, 0, 0.2, 1),
-    filter 650ms cubic-bezier(0.4, 0, 0.2, 1),
-    opacity 650ms cubic-bezier(0.4, 0, 0.2, 1),
-    visibility 0s 650ms;
+/* 侧面压暗 */
+.card-dim {
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  background: #06040a;
+  opacity: var(--dim, 0);
+  pointer-events: none;
 }
-
-/* 新主牌亮相时扫一道流光 */
+/* 主牌金晕（随接近中心渐显） */
+.card-glow {
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  box-shadow: 0 0 42px rgba(227, 196, 110, 0.45), 0 18px 44px rgba(0, 0, 0, 0.55);
+  opacity: var(--glow, 0);
+  pointer-events: none;
+}
+/* 流光：随位置连续扫过 */
 .card-shine {
   position: absolute;
   inset: 0;
@@ -221,19 +227,11 @@ main, header, footer { position: relative; z-index: 1; }
   width: 58%;
   background: linear-gradient(105deg,
     transparent 8%,
-    rgba(255, 240, 205, 0.4) 45%,
-    rgba(255, 255, 255, 0.24) 52%,
+    rgba(255, 240, 205, 0.34) 45%,
+    rgba(255, 255, 255, 0.2) 52%,
     transparent 90%);
-  transform: translateX(-170%);
-  opacity: 0;
-}
-.pos-center .card-shine::before {
-  animation: shine-sweep 950ms cubic-bezier(0.4, 0, 0.2, 1) 260ms 1 both;
-}
-@keyframes shine-sweep {
-  0%   { transform: translateX(-170%); opacity: 0; }
-  25%  { opacity: 1; }
-  100% { transform: translateX(330%); opacity: 0; }
+  transform: translateX(var(--shine-t, -170%));
+  opacity: var(--shine-o, 0);
 }
 
 /* 抽牌：主牌升起离场 */
@@ -241,45 +239,16 @@ main, header, footer { position: relative; z-index: 1; }
   transition: transform 0.55s cubic-bezier(0.3, 0.9, 0.3, 1), opacity 0.4s 0.22s;
   transform: translateX(-50%) translateY(-56vh) !important;
   opacity: 0 !important;
-  z-index: 40;
+  z-index: 400 !important;
 }
 
-/* 入场发牌 */
-.car-card.dealing { animation: deal-in 650ms cubic-bezier(0.4, 0, 0.2, 1) backwards; }
-@keyframes deal-in {
-  from { opacity: 0; transform: translateX(-50%) translateY(36px); }
-}
-
-/* 两侧切换按钮 */
-.nav-arrow {
-  position: absolute;
-  top: 44%;
-  transform: translateY(-50%);
-  width: 54px;
-  height: 54px;
-  border-radius: 50%;
-  border: 2px solid rgba(236, 230, 247, 0.7);
-  background: rgba(20, 14, 44, 0.25);
-  color: var(--text);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 30;
-  transition: transform 150ms, background-color 150ms;
-}
-.nav-arrow:hover { transform: translateY(-50%) scale(1.08); background: rgba(255, 255, 255, 0.12); }
-.nav-prev { left: max(8px, 3%); }
-.nav-next { right: max(8px, 3%); }
+/* 入场发牌（只动透明度，避免与逐帧 transform 打架） */
+.car-card.dealing { animation: deal-in 0.7s ease backwards; }
+@keyframes deal-in { from { opacity: 0; } }
 
 @media (max-width: 720px) {
   .ring-area { height: 400px; }
-  .pos-center { height: 76%; bottom: 5%; }
-  .pos-left  { left: 15%; height: 28%; bottom: 32%; }
-  .pos-right { left: 85%; height: 28%; bottom: 32%; }
-  .pos-back  { height: 23%; bottom: 36%; }
-  .pos-hidden { height: 23%; bottom: 36%; }
-  .nav-arrow { width: 42px; height: 42px; top: 42%; }
+  .car-card { height: 76%; bottom: 5%; }
 }
 
 .stack-hint {
