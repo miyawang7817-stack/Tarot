@@ -147,9 +147,17 @@ main, header, footer { position: relative; z-index: 1; }
   letter-spacing: 1px;
 }
 
-/* ============ 抽牌页 ============ */
-.draw-header { text-align: center; margin-bottom: 6px; }
-.draw-header h2 { color: var(--gold-bright); letter-spacing: 4px; font-size: clamp(20px, 3vw, 26px); }
+/* ============ 抽牌页（单屏：flex 纵向分配，轮盘弹性伸缩） ============ */
+#view-draw {
+  height: calc(100vh - 72px);       /* 扣除顶栏 */
+  display: flex;
+  flex-direction: column;
+  padding-top: 14px;
+  padding-bottom: 12px;
+  overflow: hidden;
+}
+.draw-header { text-align: center; margin-bottom: 0; flex: none; }
+.draw-header h2 { color: var(--gold-bright); letter-spacing: 4px; font-size: clamp(18px, 2.4vh, 24px); }
 .draw-progress { margin-top: 10px; color: var(--text-dim); font-size: 14px; letter-spacing: 1px; min-height: 22px; }
 .draw-progress b { color: var(--gold); font-size: 16px; }
 
@@ -158,8 +166,10 @@ main, header, footer { position: relative; z-index: 1; }
    逐帧只写 transform / opacity（纯合成器），保证满帧丝滑 */
 .ring-area {
   position: relative;
-  height: clamp(430px, 60vh, 580px);
-  margin: 6px auto 0;
+  flex: 1 1 auto;
+  min-height: 250px;
+  width: 100%;
+  margin: 0 auto;
   max-width: 1080px;
   touch-action: pan-y;
   user-select: none;
@@ -266,14 +276,13 @@ main, header, footer { position: relative; z-index: 1; }
 @keyframes deal-in { from { opacity: 0; } }
 
 @media (max-width: 720px) {
-  .ring-area { height: 400px; }
   .car-card { height: 54%; }
 }
 
 /* 牌位大标题（参考视频卡片下方的巨字标题） */
-.draw-pos-wrap { text-align: center; margin-top: 2px; }
+.draw-pos-wrap { text-align: center; margin-top: 0; flex: none; }
 .draw-pos {
-  font-size: clamp(30px, 5vw, 54px);
+  font-size: clamp(24px, 4.2vh, 46px);
   font-weight: 600;
   letter-spacing: 14px;
   text-indent: 14px;
@@ -287,7 +296,7 @@ main, header, footer { position: relative; z-index: 1; }
   to   { opacity: 1; transform: none; filter: blur(0); }
 }
 .draw-pos-wrap .draw-progress {
-  margin-top: 10px;
+  margin-top: 6px;
   color: var(--text-dim);
   font-size: 13px;
   letter-spacing: 2px;
@@ -299,8 +308,9 @@ main, header, footer { position: relative; z-index: 1; }
   justify-content: center;
   flex-wrap: wrap;
   gap: 12px;
-  margin-top: 20px;
-  min-height: 84px;
+  margin-top: 10px;
+  min-height: 0;
+  flex: none;
 }
 .tray-slot {
   display: flex;
@@ -352,8 +362,10 @@ main, header, footer { position: relative; z-index: 1; }
   justify-content: center;
   gap: 14px;
   flex-wrap: wrap;
-  margin-top: 18px;
+  margin-top: 12px;
 }
+.draw-actions { flex: none; margin-top: 10px; }
+.draw-actions .btn { padding: 8px 20px; font-size: 13px; }
 
 /* ============ 按钮 ============ */
 .btn {
