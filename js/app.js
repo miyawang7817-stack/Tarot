@@ -68,288 +68,202 @@
     });
   }
 
-  /* ---------- 抽牌页：3D 命运牌环 ----------
-     牌沿圆柱面排成立体转环：拖动 / 惯性 / 自动旋转，明暗与流光随角度变化，
-     点击中间的牌将其抽起，点侧边的牌先转到中间 */
+  /* ---------- 抽牌页：命运轮盘（角色制轮换） ----------
+     中间主牌 + 左右虚化小牌 + 背后一张；切换时位置 / 大小 / 模糊 / 透明度
+     在 650ms 内同步过渡；空闲时自动轮换；点中间的牌抽取 */
 
-  const STEP_DEG = 22.5;                 // 相邻牌的圆周角
-  const VIEW_DEG = 112;                  // 可见角度范围（±）
-  const AUTO_SPEED = 0.0003;             // 自动旋转速度（张/毫秒，约 3.3 秒一张）
-  const AUTO_RAMP = 1000;                // 自动旋转的启动渐入时长（毫秒）
-  const IDLE_DELAY = 2000;               // 交互后多久恢复自动旋转
+  const STEP_MS = 650;                   // 一次轮换的过渡时长
+  const AUTO_EVERY = 2600;               // 自动轮换间隔
+  const IDLE_DELAY = 2200;               // 交互后多久恢复自动轮换
   const REDUCED_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  let ring = {
-    rot: 0,            // 当前旋转量（单位：张）
-    cards: [],         // { entry, el, shine }
+  const car = {
+    active: 0,         // 当前主牌在牌堆中的下标
+    animating: false,  // 轮换过渡期间锁定
     locked: false,     // 抽牌动画期间锁定
-    anim: null,        // 吸附动画的 rAF id
-    loop: null,        // 自动旋转主循环的 rAF id
-    dragging: false,
-    snapping: false,
-    lastTouch: 0,      // 最近一次交互时间
+    lastTouch: 0,      // 最近一次用户交互
+    lastAuto: 0,       // 最近一次自动轮换
+    loop: null,
+    cards: [],         // { entry, el }
   };
 
   function startDraw(spread) {
     state.spread = spread;
     state.picked = [];
     state.deck = freshShuffledDeck();
-    ring.rot = 0;
-    ring.locked = false;
-    // 入场发牌动画（约 0.9s）一结束就开始自动旋转，不用干等空闲判定
-    ring.lastTouch = performance.now() - IDLE_DELAY + 900;
+    car.active = 0;
+    car.locked = false;
+    car.animating = false;
+    car.lastTouch = performance.now();
+    car.lastAuto = performance.now();
     $('#draw-title').textContent = spread.nameZh;
-    buildRing(true);
+    buildCarousel(true);
     renderTray();
     updateDrawProgress();
     showView('draw');
-    startRingLoop();
+    startAutoLoop();
   }
 
-  function ringGeom() {
-    const mobile = window.innerWidth < 720;
-    // 半径由弧长间距推出：R = spacing / stepRad（间距 > 牌宽，留出呼吸感）
-    const spacing = mobile ? 136 : 218;
-    return { R: spacing / (STEP_DEG * Math.PI / 180) };
-  }
-
-  function buildRing(deal) {
+  function buildCarousel(deal) {
     const stage = $('#ring-stage');
     stage.innerHTML = '';
-    cancelAnimationFrame(ring.anim);
-    ring.snapping = false;
-    ring.cards = state.deck.map((entry, i) => {
+    car.cards = state.deck.map((entry, i) => {
       const el = document.createElement('button');
-      el.className = 'ring-card' + (deal ? ' dealing' : '');
+      el.className = 'car-card pos-hidden';
       el.dataset.idx = i;
-      if (deal) el.style.animationDelay = (Math.min(Math.abs(i), 5) * 90) + 'ms';
-      el.setAttribute('aria-label', '牌环中的牌');
-      el.innerHTML = '<span class="card-back"></span><span class="card-dim"></span><span class="card-shine"></span>';
+      el.setAttribute('aria-label', '轮盘中的牌');
+      el.innerHTML = '<span class="card-back"></span><span class="card-shine"></span>';
       stage.appendChild(el);
       return { entry, el };
     });
-    layoutRing();
-  }
-
-  /* 把每张牌摆到圆柱面上：θ 为该牌相对正前方的圆周角。
-     位置 = 圆周坐标，姿态 = 沿切面朝外；明暗与流光随 θ 连续变化 */
-  function layoutRing() {
-    const n = ring.cards.length;
-    if (!n) return;
-    const { R } = ringGeom();
-    const maxSteps = VIEW_DEG / STEP_DEG;
-    ring.cards.forEach((c, i) => {
-      let steps = (((i - ring.rot) % n) + n) % n;
-      if (steps > n / 2) steps -= n;
-      const el = c.el;
-      if (Math.abs(steps) > maxSteps) {
-        // 不可见的牌只在状态切换时写一次样式，并整体跳过渲染（78 张里通常 60+ 张）
-        if (!c.hidden) {
-          c.hidden = true;
-          el.style.visibility = 'hidden';
-          el.style.pointerEvents = 'none';
-          el.classList.remove('center');
+    applyRoles();
+    if (deal) {
+      car.cards.forEach((c, i) => {
+        if (!c.el.classList.contains('pos-hidden')) {
+          c.el.classList.add('dealing');
+          c.el.style.animationDelay = (i % 5) * 80 + 'ms';
         }
-        return;
-      }
-      if (c.hidden) {
-        c.hidden = false;
-        el.style.visibility = 'visible';
-      }
-      const theta = steps * STEP_DEG;
-      const rad = theta * Math.PI / 180;
-      const x = Math.sin(rad) * R;
-      const z = (Math.cos(rad) - 1) * R;          // 正前方 z=0，绕向后方
-      const edge = Math.abs(theta) / VIEW_DEG;    // 0 中间 → 1 边缘
-      el.style.opacity = String(1 - Math.pow(edge, 2.2));
-      el.style.pointerEvents = 'auto';
-      // 前后遮挡由 preserve-3d 深度排序完成，无需 zIndex
-      el.style.transform = `translateX(${x.toFixed(1)}px) translateZ(${z.toFixed(1)}px) rotateY(${theta.toFixed(2)}deg)`;
-      // 光影：黑色遮罩的 opacity 表达明暗（合成器友好，替代 filter）
-      el.style.setProperty('--dim', (0.48 * (1 - Math.cos(rad))).toFixed(3));
-      // 流光：高光条随角度平移扫过卡面
-      el.style.setProperty('--shine-t', (40 - theta * 2.7).toFixed(1) + '%');
-      el.style.setProperty('--shine-o', String(Math.max(0, 1 - Math.abs(theta) / 70).toFixed(3)));
-      el.classList.toggle('center', Math.abs(steps) < 0.4);
-    });
-  }
-
-  /* 请求在下一帧重排牌环（所有旋转路径共用主循环渲染，避免一帧多次布局） */
-  function requestLayout() {
-    ring.dirty = true;
-  }
-
-  /* 吸附/转动到指定旋转量（立体缓动） */
-  function animateRotTo(target, duration = 620, done) {
-    cancelAnimationFrame(ring.anim);
-    const from = ring.rot;
-    const delta = target - from;
-    if (Math.abs(delta) < 0.001) { ring.rot = target; ring.snapping = false; layoutRing(); done && done(); return; }
-    ring.snapping = true;
-    const t0 = performance.now();
-    const ease = (t) => 1 - Math.pow(1 - t, 3); // easeOutCubic
-    const tick = (now) => {
-      const t = Math.min(1, (now - t0) / duration);
-      ring.rot = from + delta * ease(t);
-      requestLayout();
-      if (t < 1) ring.anim = requestAnimationFrame(tick);
-      else { ring.snapping = false; ring.lastTouch = performance.now(); done && done(); }
-    };
-    ring.anim = requestAnimationFrame(tick);
-  }
-
-  /* 主循环：空闲时自动缓慢旋转（渐入启动，避免突兀） */
-  function startRingLoop() {
-    if (ring.loop) return;
-    let last = 0;
-    let ramp = 0; // 0 → 1 的启动系数
-    const frame = (now) => {
-      if (views.draw.classList.contains('hidden')) { ring.loop = null; return; }
-      const dt = last ? Math.min(50, now - last) : 0;
-      last = now;
-      const idle = !ring.dragging && !ring.snapping && !ring.locked
-        && now - ring.lastTouch > IDLE_DELAY && !REDUCED_MOTION;
-      if (idle && dt) {
-        ramp = Math.min(1, ramp + dt / AUTO_RAMP);
-        // ease-in-out 的渐入曲线，让转动从静止柔和加速
-        const eased = ramp * ramp * (3 - 2 * ramp);
-        ring.rot += dt * AUTO_SPEED * eased;
-        ring.dirty = true;
-      } else if (!idle) {
-        ramp = 0;
-      }
-      if (ring.dirty) {
-        ring.dirty = false;
-        layoutRing();
-      }
-      ring.loop = requestAnimationFrame(frame);
-    };
-    ring.loop = requestAnimationFrame(frame);
-  }
-
-  /* 拖拽旋转 + 惯性 + 轻点抽牌 */
-  function setupRingInput() {
-    const area = $('#ring-area');
-    // 每转过一张牌，手指对应滑过的像素数（= 圆周弧长间距）
-    const pxPerStep = () => ringGeom().R * STEP_DEG * Math.PI / 180;
-    let startX = 0, lastX = 0, lastT = 0, velocity = 0, startRot = 0, moved = 0;
-
-    area.addEventListener('pointerdown', (e) => {
-      if (ring.locked) return;
-      ring.dragging = true;
-      ring.lastTouch = performance.now();
-      moved = 0;
-      startX = lastX = e.clientX;
-      lastT = performance.now();
-      velocity = 0;
-      startRot = ring.rot;
-      cancelAnimationFrame(ring.anim);
-      ring.snapping = false;
-      area.classList.add('grabbing');
-      area.setPointerCapture(e.pointerId);
-    });
-
-    area.addEventListener('pointermove', (e) => {
-      if (!ring.dragging) return;
-      const now = performance.now();
-      const dx = e.clientX - lastX;
-      velocity = dx / Math.max(1, now - lastT); // px/ms
-      lastX = e.clientX;
-      lastT = now;
-      moved = Math.max(moved, Math.abs(e.clientX - startX));
-      ring.rot = startRot - (e.clientX - startX) / pxPerStep();
-      ring.lastTouch = now;
-      requestLayout(); // 由主循环在下一帧统一渲染，与事件频率解耦
-    });
-
-    const finish = (e) => {
-      if (!ring.dragging) return;
-      ring.dragging = false;
-      ring.lastTouch = performance.now();
-      area.classList.remove('grabbing');
-
-      if (moved < 8) { // 轻点：按坐标找被点的牌（pointer capture 会改写 e.target）
-        const hit = document.elementFromPoint(e.clientX, e.clientY);
-        const target = hit && hit.closest('.ring-card');
-        if (target) handleRingTap(target);
-        else animateRotTo(Math.round(ring.rot));
-        return;
-      }
-      // 惯性：按松手速度多转几张，再吸附到整数位（立体缓动）
-      const fling = Math.max(-6, Math.min(6, -velocity * 4.5));
-      const target = Math.round(ring.rot + fling);
-      animateRotTo(target, 760);
-    };
-    area.addEventListener('pointerup', finish);
-    area.addEventListener('pointercancel', () => {
-      ring.dragging = false;
-      area.classList.remove('grabbing');
-      animateRotTo(Math.round(ring.rot));
-    });
-
-    // 键盘可达性：左右转动，回车抽中间的牌
-    area.tabIndex = 0;
-    area.addEventListener('keydown', (e) => {
-      if (ring.locked) return;
-      ring.lastTouch = performance.now();
-      if (e.key === 'ArrowLeft') { e.preventDefault(); animateRotTo(Math.round(ring.rot) - 1); }
-      if (e.key === 'ArrowRight') { e.preventDefault(); animateRotTo(Math.round(ring.rot) + 1); }
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        const c = ring.cards[centerIndex()];
-        if (c) drawRingCard(c);
-      }
-    });
-  }
-
-  function centerIndex() {
-    const n = ring.cards.length;
-    return ((Math.round(ring.rot) % n) + n) % n;
-  }
-
-  function handleRingTap(el) {
-    const i = Number(el.dataset.idx);
-    const n = ring.cards.length;
-    let steps = (((i - ring.rot) % n) + n) % n;
-    if (steps > n / 2) steps -= n;
-    if (Math.abs(steps) < 0.4) {
-      drawRingCard(ring.cards[i]);       // 点中间：抽这张
-    } else {
-      animateRotTo(ring.rot + steps);    // 点旁边：把它转到中间
+      });
+      setTimeout(() => car.cards.forEach((c) => c.el.classList.remove('dealing')), 1200);
     }
   }
 
-  function drawRingCard(card) {
-    if (ring.locked || state.picked.length >= state.spread.positions.length) return;
-    ring.locked = true;
-    const idx = Number(card.el.dataset.idx);
+  function roleOf(rel) {
+    if (rel === 0) return 'pos-center';
+    if (rel === -1) return 'pos-left';
+    if (rel === 1) return 'pos-right';
+    if (rel === 2) return 'pos-back';
+    return 'pos-hidden';
+  }
 
-    card.el.classList.add('rise');       // 中间的牌升起
-    state.picked.push(card.entry);
+  /* 按当前 active 给每张牌分配角色类，CSS 过渡自动完成动画 */
+  function applyRoles() {
+    const n = car.cards.length;
+    if (!n) return;
+    car.cards.forEach((c, i) => {
+      let rel = (((i - car.active) % n) + n) % n;
+      if (rel > n / 2) rel -= n;
+      const role = roleOf(rel);
+      if (c.role !== role) {
+        c.role = role;
+        const keepDealing = c.el.classList.contains('dealing');
+        c.el.className = 'car-card ' + role + (keepDealing ? ' dealing' : '');
+      }
+    });
+  }
+
+  function navigate(dir, isAuto) {
+    if (car.animating || car.locked) return;
+    const n = car.cards.length;
+    if (n < 2) return;
+    car.animating = true;
+    if (isAuto) car.lastAuto = performance.now();
+    else car.lastTouch = performance.now();
+    car.active = ((car.active + dir) % n + n) % n;
+    applyRoles();
+    setTimeout(() => { car.animating = false; }, STEP_MS);
+  }
+
+  /* 空闲时自动轮换 */
+  function startAutoLoop() {
+    if (car.loop) return;
+    const frame = (now) => {
+      if (views.draw.classList.contains('hidden')) { car.loop = null; return; }
+      const idle = !REDUCED_MOTION && !car.locked && !car.animating
+        && now - car.lastTouch > IDLE_DELAY
+        && now - car.lastAuto > AUTO_EVERY;
+      if (idle) navigate(1, true);
+      car.loop = requestAnimationFrame(frame);
+    };
+    car.loop = requestAnimationFrame(frame);
+  }
+
+  /* 滑动切换 + 点击选卡 */
+  function setupCarouselInput() {
+    const area = $('#ring-area');
+    let sx = 0, tracking = false, moved = 0;
+
+    area.addEventListener('pointerdown', (e) => {
+      if (car.locked) return;
+      tracking = true;
+      moved = 0;
+      sx = e.clientX;
+      car.lastTouch = performance.now();
+    });
+    area.addEventListener('pointermove', (e) => {
+      if (!tracking) return;
+      moved = Math.max(moved, Math.abs(e.clientX - sx));
+    });
+    const finish = (e) => {
+      if (!tracking) return;
+      tracking = false;
+      car.lastTouch = performance.now();
+      const dx = e.clientX - sx;
+      if (Math.abs(dx) > 56) {           // 滑动：换一张
+        navigate(dx < 0 ? 1 : -1);
+        return;
+      }
+      if (moved < 8) {                   // 轻点：中间抽牌，两侧换位
+        const hit = document.elementFromPoint(e.clientX, e.clientY);
+        const t = hit && hit.closest('.car-card');
+        if (!t) return;
+        if (t.classList.contains('pos-center')) drawCarCard(t);
+        else if (t.classList.contains('pos-left')) navigate(-1);
+        else navigate(1);
+      }
+    };
+    area.addEventListener('pointerup', finish);
+    area.addEventListener('pointercancel', () => { tracking = false; });
+
+    $('#nav-prev').addEventListener('click', () => navigate(-1));
+    $('#nav-next').addEventListener('click', () => navigate(1));
+
+    // 键盘可达性
+    area.tabIndex = 0;
+    area.addEventListener('keydown', (e) => {
+      if (car.locked) return;
+      car.lastTouch = performance.now();
+      if (e.key === 'ArrowLeft') { e.preventDefault(); navigate(-1); }
+      if (e.key === 'ArrowRight') { e.preventDefault(); navigate(1); }
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        const c = car.cards[car.active];
+        if (c) drawCarCard(c.el);
+      }
+    });
+  }
+
+  function drawCarCard(el) {
+    if (car.locked || car.animating) return;
+    if (state.picked.length >= state.spread.positions.length) return;
+    car.locked = true;
+    const idx = Number(el.dataset.idx);
+    const cardObj = car.cards[idx];
+
+    el.classList.add('rise');            // 主牌升起
+    state.picked.push(cardObj.entry);
     state.deck.splice(idx, 1);
-    ring.cards.splice(idx, 1);
-    ring.cards.forEach((c, i) => { c.el.dataset.idx = i; });
+    car.cards.splice(idx, 1);
+    car.cards.forEach((c, i) => { c.el.dataset.idx = i; });
     renderTray();
     updateDrawProgress();
 
     const finished = state.picked.length === state.spread.positions.length;
 
-    // 牌还在升起时，其余的牌就平滑合拢补位（不重建 DOM，无顿挫）
+    // 主牌还在升起时，右侧牌就平滑滑入中间补位
     setTimeout(() => {
-      if (!finished && ring.cards.length) {
-        ring.cards.forEach((c) => { if (!c.hidden) c.el.classList.add('closing'); });
-        ring.rot = idx % ring.cards.length;
-        requestLayout();
+      if (!finished && car.cards.length) {
+        car.active = idx % car.cards.length;
+        applyRoles();
       }
-    }, 200);
+    }, 180);
 
     setTimeout(() => {
-      card.el.remove();
+      el.remove();
       if (finished) { startReading(); return; }
-      ring.cards.forEach((c) => c.el.classList.remove('closing'));
-      ring.lastTouch = performance.now() - IDLE_DELAY + 900;
-      ring.locked = false;
-    }, 700);
+      car.locked = false;
+      car.lastTouch = performance.now();
+    }, 760);
   }
 
   function renderTray() {
@@ -475,16 +389,13 @@
   $('#btn-reshuffle').addEventListener('click', () => {
     state.picked = [];
     state.deck = freshShuffledDeck();
-    ring.rot = 0;
-    ring.locked = false;
-    ring.lastTouch = performance.now();
-    buildRing(true);
+    car.active = 0;
+    car.locked = false;
+    car.animating = false;
+    car.lastTouch = performance.now();
+    buildCarousel(true);
     renderTray();
     updateDrawProgress();
-    startRingLoop();
-  });
-  window.addEventListener('resize', () => {
-    if (!views.draw.classList.contains('hidden')) layoutRing();
   });
   $('#btn-flip-all').addEventListener('click', flipAll);
   $('#btn-restart').addEventListener('click', () => {
@@ -492,5 +403,5 @@
   });
 
   renderSpreadGrid();
-  setupRingInput();
+  setupCarouselInput();
 })();

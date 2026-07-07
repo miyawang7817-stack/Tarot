@@ -162,45 +162,62 @@ main, header, footer { position: relative; z-index: 1; }
 .draw-progress { margin-top: 10px; color: var(--text-dim); font-size: 14px; letter-spacing: 1px; min-height: 22px; }
 .draw-progress b { color: var(--gold); font-size: 16px; }
 
-/* 3D 命运牌环：牌立在发光星轨上，左右拖动旋转，点击中间的牌抽取 */
-:root { --card-w2: 168px; --card-h2: 280px; }
-
+/* 命运轮盘：中间主牌 + 两侧虚化小牌 + 背后一张
+   切换时位置 / 大小 / 模糊 / 透明度在 650ms 内同步过渡（参考角色制轮换动效） */
 .ring-area {
   position: relative;
-  height: clamp(320px, 46vh, 420px);
-  margin: 10px auto 0;
+  height: clamp(380px, 54vh, 520px);
+  margin: 6px auto 0;
   max-width: 900px;
-  perspective: 1200px;
-  touch-action: none;
-  cursor: grab;
+  touch-action: pan-y;
   user-select: none;
 }
-.ring-area.grabbing { cursor: grabbing; }
-.ring-stage {
+.ring-stage { position: absolute; inset: 0; }
+
+.car-card {
   position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 0;
-  height: 0;
-  transform-style: preserve-3d;
-}
-.ring-card {
-  position: absolute;
-  left: calc(var(--card-w2) / -2);
-  top: calc(var(--card-h2) / -2);
-  width: var(--card-w2);
-  height: var(--card-h2);
+  aspect-ratio: 3 / 5;
+  transform: translateX(-50%);
   border: none;
   background: none;
   padding: 0;
   cursor: pointer;
-  backface-visibility: hidden;
+  transition:
+    left 650ms cubic-bezier(0.4, 0, 0.2, 1),
+    bottom 650ms cubic-bezier(0.4, 0, 0.2, 1),
+    height 650ms cubic-bezier(0.4, 0, 0.2, 1),
+    transform 650ms cubic-bezier(0.4, 0, 0.2, 1),
+    filter 650ms cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 650ms cubic-bezier(0.4, 0, 0.2, 1);
 }
-/* 流光：高光条用 transform 平移（纯合成器动画，不触发重绘） */
+.car-card .card-back { border-radius: 12px; }
+
+.pos-center { left: 50%; bottom: 1%; height: 92%; z-index: 20; filter: none; opacity: 1; }
+.pos-center .card-back {
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.6), 0 0 42px rgba(227, 196, 110, 0.32);
+}
+.pos-left   { left: 27%; bottom: 26%; height: 40%; z-index: 10; filter: blur(2px) brightness(0.78); opacity: 0.85; }
+.pos-right  { left: 73%; bottom: 26%; height: 40%; z-index: 10; filter: blur(2px) brightness(0.78); opacity: 0.85; }
+.pos-back   { left: 50%; bottom: 30%; height: 31%; z-index: 5; filter: blur(4px) brightness(0.6); opacity: 0.95; }
+.pos-hidden {
+  left: 50%; bottom: 30%; height: 31%; z-index: 1;
+  filter: blur(6px); opacity: 0;
+  visibility: hidden; pointer-events: none;
+  transition:
+    left 650ms cubic-bezier(0.4, 0, 0.2, 1),
+    bottom 650ms cubic-bezier(0.4, 0, 0.2, 1),
+    height 650ms cubic-bezier(0.4, 0, 0.2, 1),
+    transform 650ms cubic-bezier(0.4, 0, 0.2, 1),
+    filter 650ms cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 650ms cubic-bezier(0.4, 0, 0.2, 1),
+    visibility 0s 650ms;
+}
+
+/* 新主牌亮相时扫一道流光 */
 .card-shine {
   position: absolute;
   inset: 0;
-  border-radius: 8px;
+  border-radius: 12px;
   overflow: hidden;
   pointer-events: none;
 }
@@ -213,42 +230,65 @@ main, header, footer { position: relative; z-index: 1; }
   width: 58%;
   background: linear-gradient(105deg,
     transparent 8%,
-    rgba(255, 240, 205, 0.42) 45%,
-    rgba(255, 255, 255, 0.26) 52%,
+    rgba(255, 240, 205, 0.4) 45%,
+    rgba(255, 255, 255, 0.24) 52%,
     transparent 90%);
-  transform: translateX(var(--shine-t, -140%)) rotate(0.001deg);
-  opacity: var(--shine-o, 0);
-}
-/* 侧面变暗：黑色遮罩改 opacity（纯合成器），替代逐帧改 filter */
-.card-dim {
-  position: absolute;
-  inset: 0;
-  border-radius: 8px;
-  background: #06040a;
-  opacity: var(--dim, 0);
-  pointer-events: none;
-}
-.ring-card.center .card-back {
-  box-shadow:
-    inset 0 0 0 3px #0b0812, inset 0 0 0 4px rgba(227, 196, 110, 0.4),
-    0 14px 38px rgba(0, 0, 0, 0.6), 0 0 34px rgba(227, 196, 110, 0.4);
-}
-.ring-card.rise {
-  transition: transform 0.55s cubic-bezier(0.3, 0.9, 0.3, 1), opacity 0.4s 0.22s;
-  transform: translateY(-46vh) translateZ(60px) scale(1.1) !important;
+  transform: translateX(-170%);
   opacity: 0;
 }
-/* 抽牌后牌环平滑合拢（光影同步过渡） */
-.ring-card.closing {
-  transition: transform 0.42s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.35s;
+.pos-center .card-shine::before {
+  animation: shine-sweep 950ms cubic-bezier(0.4, 0, 0.2, 1) 260ms 1 both;
 }
-.ring-card.closing .card-dim { transition: opacity 0.42s; }
-.ring-card.closing .card-shine::before { transition: transform 0.42s, opacity 0.42s; }
-.ring-card.dealing {
-  animation: ring-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+@keyframes shine-sweep {
+  0%   { transform: translateX(-170%); opacity: 0; }
+  25%  { opacity: 1; }
+  100% { transform: translateX(330%); opacity: 0; }
 }
-@keyframes ring-in {
-  from { opacity: 0; }
+
+/* 抽牌：主牌升起离场 */
+.car-card.rise {
+  transition: transform 0.55s cubic-bezier(0.3, 0.9, 0.3, 1), opacity 0.4s 0.22s;
+  transform: translateX(-50%) translateY(-56vh) !important;
+  opacity: 0 !important;
+  z-index: 40;
+}
+
+/* 入场发牌 */
+.car-card.dealing { animation: deal-in 650ms cubic-bezier(0.4, 0, 0.2, 1) backwards; }
+@keyframes deal-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(36px); }
+}
+
+/* 两侧切换按钮 */
+.nav-arrow {
+  position: absolute;
+  top: 44%;
+  transform: translateY(-50%);
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  border: 2px solid rgba(236, 230, 247, 0.7);
+  background: rgba(20, 14, 44, 0.25);
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 30;
+  transition: transform 150ms, background-color 150ms;
+}
+.nav-arrow:hover { transform: translateY(-50%) scale(1.08); background: rgba(255, 255, 255, 0.12); }
+.nav-prev { left: max(8px, 3%); }
+.nav-next { right: max(8px, 3%); }
+
+@media (max-width: 720px) {
+  .ring-area { height: 400px; }
+  .pos-center { height: 76%; bottom: 5%; }
+  .pos-left  { left: 15%; height: 28%; bottom: 32%; }
+  .pos-right { left: 85%; height: 28%; bottom: 32%; }
+  .pos-back  { height: 23%; bottom: 36%; }
+  .pos-hidden { height: 23%; bottom: 36%; }
+  .nav-arrow { width: 42px; height: 42px; top: 42%; }
 }
 
 .stack-hint {
@@ -502,7 +542,6 @@ main, header, footer { position: relative; z-index: 1; }
 @media (max-width: 720px) {
   :root { --card-w: 78px; --card-h: 130px; }
   .app-header { flex-direction: column; gap: 6px; align-items: center; }
-  :root { --card-w2: 140px; --card-h2: 234px; }
   .stack-area { height: 300px; }
   .tray-slot { width: 52px; }
   .tray-card { width: 36px; height: 60px; }
