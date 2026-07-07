@@ -80,15 +80,6 @@ main, header, footer { position: relative; z-index: 1; }
 .brand-icon { font-size: 24px; }
 .brand-name { font-weight: 700; }
 
-.app-footer {
-  text-align: center;
-  padding: 40px 16px 28px;
-  color: var(--text-dim);
-  font-size: 13px;
-  letter-spacing: 1px;
-}
-.app-footer a { color: var(--purple); text-decoration: none; }
-.app-footer a:hover { text-decoration: underline; }
 
 /* ============ 视图切换 ============ */
 .view { padding: clamp(20px, 4vw, 44px) clamp(16px, 5vw, 48px); max-width: 1180px; margin: 0 auto; }
