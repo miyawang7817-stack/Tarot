@@ -222,9 +222,14 @@
     car.ambH = h;
     const blobs = document.querySelectorAll('#ring-area .amb i');
     if (!blobs.length) return;
-    blobs[0].style.backgroundColor = `hsl(${h} 62% 52% / 0.42)`;
-    blobs[1].style.backgroundColor = `hsl(${(h + 24) % 360} 55% 50% / 0.34)`;
-    blobs[2].style.backgroundColor = `hsl(${(h + 336) % 360} 55% 46% / 0.30)`;
+    const cfg = [
+      [h, 0.40], [(h + 22) % 360, 0.32], [(h + 338) % 360, 0.30],
+      [(h + 34) % 360, 0.26], [h, 0.28],
+    ];
+    blobs.forEach((b, i) => {
+      const [hh, al] = cfg[i % cfg.length];
+      b.style.backgroundColor = `hsl(${hh} 58% 51% / ${al})`;
+    });
   }
 
   /* 平滑吸附 / 转到目标位置
