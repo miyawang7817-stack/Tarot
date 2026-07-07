@@ -155,6 +155,7 @@ main, header, footer { position: relative; z-index: 1; }
   padding-top: 14px;
   padding-bottom: 12px;
   overflow: hidden;
+  max-width: none;                  /* 全出血：光晕可延伸到屏幕边缘 */
 }
 .draw-header { text-align: center; margin-bottom: 0; flex: none; }
 .draw-header h2 { color: var(--gold-bright); letter-spacing: 4px; font-size: clamp(18px, 2.4vh, 24px); }
@@ -180,7 +181,14 @@ main, header, footer { position: relative; z-index: 1; }
 .ring-stage { position: absolute; inset: 0; }
 
 /* 氛围光晕：纯色圆 + 大模糊 = 柔焦光雾；颜色随中心牌花色平滑过渡 */
-.amb { position: absolute; inset: -8%; pointer-events: none; z-index: 0; }
+.amb {
+  position: absolute;
+  inset: -18% -30%;
+  pointer-events: none;
+  z-index: 0;
+  -webkit-mask-image: radial-gradient(ellipse 62% 58% at 50% 48%, #000 42%, transparent 74%);
+  mask-image: radial-gradient(ellipse 62% 58% at 50% 48%, #000 42%, transparent 74%);
+}
 .amb i {
   position: absolute;
   border-radius: 50%;
