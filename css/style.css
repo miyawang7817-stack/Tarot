@@ -158,9 +158,9 @@ main, header, footer { position: relative; z-index: 1; }
    逐帧只写 transform / opacity（纯合成器），保证满帧丝滑 */
 .ring-area {
   position: relative;
-  height: clamp(380px, 54vh, 520px);
+  height: clamp(430px, 60vh, 580px);
   margin: 6px auto 0;
-  max-width: 900px;
+  max-width: 1080px;
   touch-action: pan-y;
   user-select: none;
   cursor: grab;
@@ -191,7 +191,7 @@ main, header, footer { position: relative; z-index: 1; }
   position: absolute;
   left: 50%;
   top: 50%;
-  height: 62%;
+  height: 70%;
   aspect-ratio: 3 / 5;
   transform-origin: 50% 50%;
   transform: translate(-50%, -50%);
@@ -216,7 +216,7 @@ main, header, footer { position: relative; z-index: 1; }
   position: absolute;
   inset: 0;
   border-radius: 12px;
-  background: #06040a;
+  background: linear-gradient(180deg, rgba(6, 4, 10, 0.45) 0%, rgba(6, 4, 10, 0.8) 60%, rgba(6, 4, 10, 0.98) 100%);
   opacity: var(--dim, 0);
   pointer-events: none;
 }
@@ -267,7 +267,7 @@ main, header, footer { position: relative; z-index: 1; }
 
 @media (max-width: 720px) {
   .ring-area { height: 400px; }
-  .car-card { height: 46%; }
+  .car-card { height: 54%; }
 }
 
 /* 牌位大标题（参考视频卡片下方的巨字标题） */

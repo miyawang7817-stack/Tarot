@@ -74,8 +74,8 @@
      拖动跟手、惯性滑行渐停、空闲匀速漂移，逐帧只写 transform/opacity */
 
   const VISIBLE_REL = 3;                 // 相对位置超出 ±3 即隐藏
-  const AUTO_SPEED = 0.00032;            // 自动漂移速度（张/毫秒，约 3.1 秒一张）
-  const AUTO_RAMP = 900;                 // 漂移启动渐入（毫秒）
+  const AUTO_STEP_MS = 950;              // 自动轮换：滑到下一张的时长（缓入缓出）
+  const AUTO_DWELL = 2400;               // 自动轮换：每张卡在中间的停留时间
   const IDLE_DELAY = 2000;               // 交互后多久恢复漂移
   const FRICTION = 300;                  // 惯性摩擦时间常数（毫秒）
   const REDUCED_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -121,12 +121,12 @@
     const mobile = window.innerWidth < 720;
     car.geom = {
       // 五卡构图（参考视频）：|rel|=1 远处小卡，|rel|=2 近处门板侧立卡
-      x1: W * (mobile ? 0.30 : 0.18),
-      x2: W * (mobile ? 0.42 : 0.265),
-      x3: W * (mobile ? 0.46 : 0.30),
-      s1: 0.42,                               // 远处小卡
-      s2: 0.66,                               // 门板卡（更高但近乎侧立）
-      pxPerStep: W * (mobile ? 0.30 : 0.18),  // 拖动一张牌对应的像素
+      x1: W * (mobile ? 0.31 : 0.21),
+      x2: W * (mobile ? 0.44 : 0.315),
+      x3: W * (mobile ? 0.48 : 0.355),
+      s1: 0.48,                               // 侧卡（稍小于主牌）
+      s2: 0.62,                               // 门板卡（近乎侧立）
+      pxPerStep: W * (mobile ? 0.31 : 0.21),  // 拖动一张牌对应的像素
     };
   }
 
@@ -202,7 +202,7 @@
       el.style.opacity = (kp([1, 0.95, 0.95, 0.95], r) * fade).toFixed(3);
       el.style.zIndex = String(100 - Math.round(r * 10));
       el.style.setProperty('--blur-o', kp([0, 0.18, 0.32, 0.6], r).toFixed(3));
-      el.style.setProperty('--dim', kp([0, 0.3, 0.44, 0.6], r).toFixed(3));
+      el.style.setProperty('--dim', kp([0, 0.24, 0.4, 0.58], r).toFixed(3));
       el.style.setProperty('--glow', Math.max(0, 1 - r * 1.8).toFixed(3));
       el.style.setProperty('--shine-o', Math.max(0, 1 - r * 1.3).toFixed(3));
       el.style.setProperty('--shine-t', (40 - rel * 180).toFixed(1) + '%');
@@ -227,8 +227,11 @@
     blobs[2].style.backgroundColor = `hsl(${(h + 336) % 360} 55% 46% / 0.30)`;
   }
 
-  /* 平滑吸附 / 转到目标位置 */
-  function animateRotTo(target, duration = 480, done) {
+  /* 平滑吸附 / 转到目标位置
+     opts.auto: 自动轮换的步进（不刷新交互时间戳，缓入缓出更从容） */
+  const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
+  const easeInOutCubic = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+  function animateRotTo(target, duration = 480, done, opts = {}) {
     cancelAnimationFrame(car.anim);
     car.inertia = false;
     const from = car.rot;
@@ -236,22 +239,25 @@
     if (Math.abs(delta) < 0.001) { car.rot = target; car.snapping = false; car.dirty = true; done && done(); return; }
     car.snapping = true;
     const t0 = performance.now();
-    const ease = (t) => 1 - Math.pow(1 - t, 3);
+    const ease = opts.auto ? easeInOutCubic : easeOutCubic;
     const tick = (now) => {
       const t = Math.min(1, (now - t0) / duration);
       car.rot = from + delta * ease(t);
       car.dirty = true;
       if (t < 1) car.anim = requestAnimationFrame(tick);
-      else { car.snapping = false; car.lastTouch = performance.now(); done && done(); }
+      else {
+        car.snapping = false;
+        if (!opts.auto) car.lastTouch = performance.now();
+        done && done();
+      }
     };
     car.anim = requestAnimationFrame(tick);
   }
 
-  /* 主循环：惯性滑行 → 吸附；空闲时匀速漂移（带渐入） */
+  /* 主循环：惯性滑行 → 吸附；空闲时「走一步、停一拍」自动轮换 */
   function startCarLoop() {
     if (car.loop) return;
     let last = 0;
-    let ramp = 0;
     const frame = (now) => {
       if (views.draw.classList.contains('hidden')) { car.loop = null; return; }
       const dt = last ? Math.min(50, now - last) : 0;
@@ -266,15 +272,14 @@
           animateRotTo(Math.round(car.rot), 360);
         }
       } else {
+        // 每张卡在中间停留 AUTO_DWELL，然后用缓入缓出滑到下一张
         const idle = !car.dragging && !car.snapping && !car.locked && !car.inertia
-          && now - car.lastTouch > IDLE_DELAY && !REDUCED_MOTION;
-        if (idle && dt) {
-          ramp = Math.min(1, ramp + dt / AUTO_RAMP);
-          const eased = ramp * ramp * (3 - 2 * ramp);
-          car.rot += dt * AUTO_SPEED * eased;
-          car.dirty = true;
-        } else if (!idle) {
-          ramp = 0;
+          && now - car.lastTouch > IDLE_DELAY
+          && now - (car.lastAuto || 0) > AUTO_DWELL
+          && !REDUCED_MOTION;
+        if (idle) {
+          car.lastAuto = now;
+          animateRotTo(Math.round(car.rot) + 1, AUTO_STEP_MS, null, { auto: true });
         }
       }
       if (car.ghost && dt) {              // 幽灵槽位收拢
