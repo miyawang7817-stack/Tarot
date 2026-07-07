@@ -47,9 +47,6 @@ python3 -m http.server 8000
 - 牌环使用 Pointer Events 拖拽 + `translateZ/rotateY` 透视排布，惯性吸附由 rAF 缓动驱动；卡背为内联 SVG 绘制的黑金日月徽章；星轨用 conic-gradient 光弧旋转动画
 - 翻牌使用 `preserve-3d` + `backface-visibility` 实现双面卡牌
 
-## 📄 License
-
-MIT — 牌面图片与牌义数据版权归 [tarot-vibecoding](https://github.com/Lurell/tarot-vibecoding) 原作者所有（MIT License）。
 
 ---
 
