@@ -194,14 +194,44 @@ main, header, footer { position: relative; z-index: 1; }
   border-radius: 50%;
   filter: blur(64px);
   transition: background-color 1.4s ease;
-  animation: amb-float 14s ease-in-out infinite alternate;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
 }
-.amb .a1 { width: 52%; aspect-ratio: 1.1; left: 8%; top: 0%; background: hsl(46 60% 50% / 0.4); }
-.amb .a2 { width: 46%; aspect-ratio: 0.9; right: 6%; top: 14%; background: hsl(66 55% 48% / 0.32); animation-delay: -5s; animation-direction: alternate-reverse; }
-.amb .a3 { width: 40%; aspect-ratio: 1.25; left: 30%; bottom: -14%; background: hsl(26 55% 45% / 0.3); animation-delay: -9s; }
-@keyframes amb-float {
-  from { transform: translate(-4%, -3%) scale(0.96); }
-  to   { transform: translate(5%, 4%) scale(1.06); }
+/* 每团光斑一条独立的环形游走轨迹（参考视频：大幅漂移 + 体积脉动） */
+.amb .a1 {
+  width: 52%; aspect-ratio: 1.1; left: 4%; top: -4%;
+  background: hsl(46 60% 50% / 0.4);
+  animation-name: amb-a; animation-duration: 13s;
+}
+.amb .a2 {
+  width: 46%; aspect-ratio: 0.9; right: 2%; top: 10%;
+  background: hsl(66 55% 48% / 0.32);
+  animation-name: amb-b; animation-duration: 17s; animation-delay: -6s;
+}
+.amb .a3 {
+  width: 40%; aspect-ratio: 1.25; left: 28%; bottom: -18%;
+  background: hsl(26 55% 45% / 0.3);
+  animation-name: amb-c; animation-duration: 21s; animation-delay: -11s;
+}
+@keyframes amb-a {
+  0%   { transform: translate(0%, 0%) scale(1); }
+  25%  { transform: translate(26%, 18%) scale(1.12); }
+  50%  { transform: translate(44%, -4%) scale(0.92); }
+  75%  { transform: translate(14%, -20%) scale(1.08); }
+  100% { transform: translate(0%, 0%) scale(1); }
+}
+@keyframes amb-b {
+  0%   { transform: translate(0%, 0%) scale(1); }
+  30%  { transform: translate(-30%, 22%) scale(0.9); }
+  55%  { transform: translate(-46%, -8%) scale(1.14); }
+  80%  { transform: translate(-12%, -22%) scale(0.96); }
+  100% { transform: translate(0%, 0%) scale(1); }
+}
+@keyframes amb-c {
+  0%   { transform: translate(0%, 0%) scale(1); }
+  35%  { transform: translate(24%, -26%) scale(1.1); }
+  65%  { transform: translate(-22%, -12%) scale(0.9); }
+  100% { transform: translate(0%, 0%) scale(1); }
 }
 @media (prefers-reduced-motion: reduce) { .amb i { animation: none; } }
 
