@@ -32,13 +32,15 @@
     <section id="view-draw" class="view hidden">
       <div class="draw-header">
         <h2 id="draw-title"></h2>
-        <p id="draw-progress" class="draw-progress"></p>
       </div>
       <div class="ring-area" id="ring-area">
         <div class="amb" aria-hidden="true"><i class="a1"></i><i class="a2"></i><i class="a3"></i></div>
         <div class="ring-stage" id="ring-stage"></div>
       </div>
-      <p class="stack-hint">滑动或点击两侧换牌 ✦ 点击中间的牌抽取</p>
+      <div class="draw-pos-wrap">
+        <h3 class="draw-pos" id="draw-pos"></h3>
+        <p id="draw-progress" class="draw-progress"></p>
+      </div>
       <div class="drawn-tray" id="drawn-tray"></div>
       <div class="draw-actions">
         <button class="btn btn-ghost" id="btn-reshuffle">重新洗牌</button>

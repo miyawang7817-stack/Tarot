@@ -120,12 +120,13 @@
     const H = area.clientHeight;
     const mobile = window.innerWidth < 720;
     car.geom = {
-      xoff1: W * (mobile ? 0.35 : 0.23),      // 侧牌横向偏移
-      y1: H * (mobile ? 0.27 : 0.25),         // 侧牌抬升
-      y2: H * 0.29,                           // 纵深位抬升
-      s1: mobile ? 0.37 : 0.435,              // 侧牌缩放
-      s2: mobile ? 0.3 : 0.337,               // 纵深缩放
-      pxPerStep: W * (mobile ? 0.35 : 0.23),  // 拖动一张牌对应的像素
+      // 五卡构图（参考视频）：|rel|=1 远处小卡，|rel|=2 近处门板侧立卡
+      x1: W * (mobile ? 0.30 : 0.18),
+      x2: W * (mobile ? 0.42 : 0.265),
+      x3: W * (mobile ? 0.46 : 0.30),
+      s1: 0.42,                               // 远处小卡
+      s2: 0.66,                               // 门板卡（更高但近乎侧立）
+      pxPerStep: W * (mobile ? 0.30 : 0.18),  // 拖动一张牌对应的像素
     };
   }
 
@@ -192,17 +193,16 @@
         el.style.pointerEvents = 'auto';
       }
       const sign = rel < 0 ? -1 : 1;
-      const x = sign * kp([0, g.xoff1, 0, 0], r);
-      const y = kp([0, g.y1, g.y2, g.y2], r);
+      const x = sign * kp([0, g.x1, g.x2, g.x3], r);
       const s = kp([1, g.s1, g.s2, g.s2], r);
-      const ry = sign * kp([0, 64, 76, 76], r);   // 两侧的牌向中心侧立（3D 翻转过渡）
-      const fade = Math.max(0, Math.min(1, (2.9 - r) / 0.6));
+      const ry = sign * kp([0, 16, 80, 86], r);   // 远处小卡微侧，门板卡近乎 90° 侧立
+      const fade = Math.max(0, Math.min(1, (3.0 - r) / 0.5));
       el.style.transform =
-        `translateX(calc(-50% + ${x.toFixed(1)}px)) translateY(${(-y).toFixed(1)}px) rotateY(${ry.toFixed(2)}deg) scale(${s.toFixed(4)})`;
-      el.style.opacity = (kp([1, 0.92, 0.95, 0.95], r) * fade).toFixed(3);
+        `translate(calc(-50% + ${x.toFixed(1)}px), -50%) rotateY(${ry.toFixed(2)}deg) scale(${s.toFixed(4)})`;
+      el.style.opacity = (kp([1, 0.95, 0.95, 0.95], r) * fade).toFixed(3);
       el.style.zIndex = String(100 - Math.round(r * 10));
-      el.style.setProperty('--blur-o', kp([0, 0.22, 0.6, 0.95], r).toFixed(3));
-      el.style.setProperty('--dim', kp([0, 0.2, 0.42, 0.55], r).toFixed(3));
+      el.style.setProperty('--blur-o', kp([0, 0.18, 0.32, 0.6], r).toFixed(3));
+      el.style.setProperty('--dim', kp([0, 0.3, 0.44, 0.6], r).toFixed(3));
       el.style.setProperty('--glow', Math.max(0, 1 - r * 1.8).toFixed(3));
       el.style.setProperty('--shine-o', Math.max(0, 1 - r * 1.3).toFixed(3));
       el.style.setProperty('--shine-t', (40 - rel * 180).toFixed(1) + '%');
@@ -448,8 +448,16 @@
     const n = state.picked.length;
     const next = state.spread.positions[n];
     $('#draw-progress').innerHTML = next
-      ? `已抽 <b>${n}</b> / ${total} 张 —— 凭直觉为「${next.name}」抽一张牌`
-      : `已抽 <b>${n}</b> / ${total} 张，命运之牌已就位……`;
+      ? `已抽 <b>${n}</b> / ${total} ✦ 滑动换牌 · 点击中间的牌抽取`
+      : `已抽 <b>${n}</b> / ${total}，命运之牌已就位……`;
+    const pos = $('#draw-pos');
+    const txt = next ? next.name : '静候启示';
+    if (pos.textContent !== txt) {
+      pos.textContent = txt;
+      pos.style.animation = 'none';
+      void pos.offsetWidth;               // 重新触发入场动画
+      pos.style.animation = '';
+    }
   }
 
   /* ---------- 解读页 ---------- */

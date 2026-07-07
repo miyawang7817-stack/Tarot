@@ -178,9 +178,9 @@ main, header, footer { position: relative; z-index: 1; }
   transition: background-color 1.4s ease;
   animation: amb-float 14s ease-in-out infinite alternate;
 }
-.amb .a1 { width: 46%; aspect-ratio: 1.15; left: 14%; top: 6%; background: hsl(46 60% 50% / 0.42); }
-.amb .a2 { width: 38%; aspect-ratio: 0.95; right: 12%; top: 22%; background: hsl(66 55% 48% / 0.34); animation-delay: -5s; animation-direction: alternate-reverse; }
-.amb .a3 { width: 30%; aspect-ratio: 1.2; left: 36%; bottom: 4%; background: hsl(26 55% 45% / 0.3); animation-delay: -9s; }
+.amb .a1 { width: 52%; aspect-ratio: 1.1; left: 8%; top: 0%; background: hsl(46 60% 50% / 0.4); }
+.amb .a2 { width: 46%; aspect-ratio: 0.9; right: 6%; top: 14%; background: hsl(66 55% 48% / 0.32); animation-delay: -5s; animation-direction: alternate-reverse; }
+.amb .a3 { width: 40%; aspect-ratio: 1.25; left: 30%; bottom: -14%; background: hsl(26 55% 45% / 0.3); animation-delay: -9s; }
 @keyframes amb-float {
   from { transform: translate(-4%, -3%) scale(0.96); }
   to   { transform: translate(5%, 4%) scale(1.06); }
@@ -190,11 +190,11 @@ main, header, footer { position: relative; z-index: 1; }
 .car-card {
   position: absolute;
   left: 50%;
-  bottom: 1%;
-  height: 92%;
+  top: 50%;
+  height: 62%;
   aspect-ratio: 3 / 5;
-  transform-origin: 50% 100%;
-  transform: translateX(-50%);
+  transform-origin: 50% 50%;
+  transform: translate(-50%, -50%);
   border: none;
   background: none;
   padding: 0;
@@ -256,7 +256,7 @@ main, header, footer { position: relative; z-index: 1; }
 /* 抽牌：主牌升起离场 */
 .car-card.rise {
   transition: transform 0.55s cubic-bezier(0.3, 0.9, 0.3, 1), opacity 0.4s 0.22s;
-  transform: translateX(-50%) translateY(-56vh) !important;
+  transform: translate(-50%, calc(-50% - 52vh)) !important;
   opacity: 0 !important;
   z-index: 400 !important;
 }
@@ -267,15 +267,30 @@ main, header, footer { position: relative; z-index: 1; }
 
 @media (max-width: 720px) {
   .ring-area { height: 400px; }
-  .car-card { height: 76%; bottom: 5%; }
+  .car-card { height: 46%; }
 }
 
-.stack-hint {
-  text-align: center;
+/* 牌位大标题（参考视频卡片下方的巨字标题） */
+.draw-pos-wrap { text-align: center; margin-top: 2px; }
+.draw-pos {
+  font-size: clamp(30px, 5vw, 54px);
+  font-weight: 600;
+  letter-spacing: 14px;
+  text-indent: 14px;
+  color: var(--gold-bright);
+  text-shadow: 0 0 34px rgba(227, 196, 110, 0.45);
+  animation: pos-in 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+  min-height: 1.2em;
+}
+@keyframes pos-in {
+  from { opacity: 0; transform: translateY(16px); filter: blur(8px); }
+  to   { opacity: 1; transform: none; filter: blur(0); }
+}
+.draw-pos-wrap .draw-progress {
+  margin-top: 10px;
   color: var(--text-dim);
   font-size: 13px;
   letter-spacing: 2px;
-  margin-top: 14px;
 }
 
 /* 已抽取的牌位托盘 */
