@@ -164,9 +164,28 @@ main, header, footer { position: relative; z-index: 1; }
   touch-action: pan-y;
   user-select: none;
   cursor: grab;
+  perspective: 1400px;
 }
 .ring-area.grabbing { cursor: grabbing; }
 .ring-stage { position: absolute; inset: 0; }
+
+/* 氛围光晕：纯色圆 + 大模糊 = 柔焦光雾；颜色随中心牌花色平滑过渡 */
+.amb { position: absolute; inset: -8%; pointer-events: none; z-index: 0; }
+.amb i {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(64px);
+  transition: background-color 1.4s ease;
+  animation: amb-float 14s ease-in-out infinite alternate;
+}
+.amb .a1 { width: 46%; aspect-ratio: 1.15; left: 14%; top: 6%; background: hsl(46 60% 50% / 0.42); }
+.amb .a2 { width: 38%; aspect-ratio: 0.95; right: 12%; top: 22%; background: hsl(66 55% 48% / 0.34); animation-delay: -5s; animation-direction: alternate-reverse; }
+.amb .a3 { width: 30%; aspect-ratio: 1.2; left: 36%; bottom: 4%; background: hsl(26 55% 45% / 0.3); animation-delay: -9s; }
+@keyframes amb-float {
+  from { transform: translate(-4%, -3%) scale(0.96); }
+  to   { transform: translate(5%, 4%) scale(1.06); }
+}
+@media (prefers-reduced-motion: reduce) { .amb i { animation: none; } }
 
 .car-card {
   position: absolute;

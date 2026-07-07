@@ -150,6 +150,8 @@
     });
     if (deal) setTimeout(() => car.cards.forEach((c) => c.el.classList.remove('dealing')), 1300);
     layoutCarousel();
+    car.ambH = null;
+    updateAmbient();
   }
 
   /* 关键帧插值：a = [中间, 侧位, 纵深, 隐没] 四个锚点，r = |rel| */
@@ -193,17 +195,36 @@
       const x = sign * kp([0, g.xoff1, 0, 0], r);
       const y = kp([0, g.y1, g.y2, g.y2], r);
       const s = kp([1, g.s1, g.s2, g.s2], r);
+      const ry = sign * kp([0, 64, 76, 76], r);   // 两侧的牌向中心侧立（3D 翻转过渡）
       const fade = Math.max(0, Math.min(1, (2.9 - r) / 0.6));
       el.style.transform =
-        `translateX(calc(-50% + ${x.toFixed(1)}px)) translateY(${(-y).toFixed(1)}px) scale(${s.toFixed(4)})`;
-      el.style.opacity = (kp([1, 0.9, 0.95, 0.95], r) * fade).toFixed(3);
+        `translateX(calc(-50% + ${x.toFixed(1)}px)) translateY(${(-y).toFixed(1)}px) rotateY(${ry.toFixed(2)}deg) scale(${s.toFixed(4)})`;
+      el.style.opacity = (kp([1, 0.92, 0.95, 0.95], r) * fade).toFixed(3);
       el.style.zIndex = String(100 - Math.round(r * 10));
-      el.style.setProperty('--blur-o', kp([0, 0.65, 0.9, 1], r).toFixed(3));
-      el.style.setProperty('--dim', kp([0, 0.26, 0.44, 0.55], r).toFixed(3));
+      el.style.setProperty('--blur-o', kp([0, 0.22, 0.6, 0.95], r).toFixed(3));
+      el.style.setProperty('--dim', kp([0, 0.2, 0.42, 0.55], r).toFixed(3));
       el.style.setProperty('--glow', Math.max(0, 1 - r * 1.8).toFixed(3));
       el.style.setProperty('--shine-o', Math.max(0, 1 - r * 1.3).toFixed(3));
       el.style.setProperty('--shine-t', (40 - rel * 180).toFixed(1) + '%');
     });
+  }
+
+  /* 氛围光晕：颜色随中心牌的花色走（大阿卡纳金、权杖橙红、圣杯蓝、宝剑紫、星币青绿） */
+  const SUIT_HUE = { major: 46, wands: 18, cups: 215, swords: 265, pentacles: 155 };
+  function updateAmbient() {
+    const n = car.cards.length;
+    if (!n) return;
+    const ci = ((Math.round(car.rot) % n) + n) % n;
+    const entry = car.cards[ci] && car.cards[ci].entry;
+    if (!entry) return;
+    const h = SUIT_HUE[entry.card.suit || 'major'];
+    if (car.ambH === h) return;
+    car.ambH = h;
+    const blobs = document.querySelectorAll('#ring-area .amb i');
+    if (!blobs.length) return;
+    blobs[0].style.backgroundColor = `hsl(${h} 62% 52% / 0.42)`;
+    blobs[1].style.backgroundColor = `hsl(${(h + 24) % 360} 55% 50% / 0.34)`;
+    blobs[2].style.backgroundColor = `hsl(${(h + 336) % 360} 55% 46% / 0.30)`;
   }
 
   /* 平滑吸附 / 转到目标位置 */
@@ -268,6 +289,7 @@
       if (car.dirty) {
         car.dirty = false;
         layoutCarousel();
+        updateAmbient();
       }
       car.loop = requestAnimationFrame(frame);
     };
