@@ -100,7 +100,23 @@ body.on-home .app-header { border-bottom-color: transparent; background: transpa
   flex-direction: column;
   background: #000;
 }
-/* 首页主视觉：巨型虹彩泡泡（皂膜质感，暖金主调 + 蓝紫流彩 + 亮边） */
+/* 首页背景视频（设计稿原版：120% 溢出裁切、循环边界淡入淡出） */
+#hero-video {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  transform: translateX(-50%);
+  width: 120%;
+  height: 120%;
+  object-fit: cover;
+  object-position: top;
+  z-index: 1;
+  opacity: 0;
+}
+/* 视频成功播放后隐藏 CSS 泡泡替身 */
+#view-home.video-on .hero-bubble { display: none; }
+
+/* 首页主视觉替身：巨型虹彩泡泡（视频缺席时的 CSS 版本） */
 .hero-bubble {
   position: absolute;
   left: 50%;

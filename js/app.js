@@ -45,6 +45,10 @@
       el.classList.toggle('hidden', key !== name)
     );
     document.body.classList.toggle('on-home', name === 'home');
+    if (window.__heroVideoCtl) {
+      if (name === 'home') window.__heroVideoCtl.enter();
+      else window.__heroVideoCtl.leave();
+    }
     window.scrollTo({ top: 0 });
   }
 
@@ -104,6 +108,62 @@
       s.style.setProperty('--dl', rand(0, 5).toFixed(1) + 's');
       sky.appendChild(s);
     }
+  }
+
+  /* 首页背景视频（设计稿原版逻辑：循环边界淡入淡出 + 断流自愈）。
+     视频文件放 assets/hero-bubble.mp4；加载失败时静默退回 CSS 泡泡替身 */
+  function setupHeroVideo() {
+    const video = $('#hero-video');
+    if (!video) return;
+    const FADE_MS = 500, LEAD = 0.55;
+    let raf = null, fadingOut = false, ok = false;
+    const onHome = () => !views.home.classList.contains('hidden');
+    const fadeTo = (target, duration = FADE_MS) => {
+      if (raf) cancelAnimationFrame(raf);
+      const from = parseFloat(video.style.opacity || '0');
+      const start = performance.now();
+      const step = (t) => {
+        const p = Math.min(1, (t - start) / duration);
+        video.style.opacity = String(from + (target - from) * p);
+        if (p < 1) raf = requestAnimationFrame(step);
+      };
+      raf = requestAnimationFrame(step);
+    };
+    video.addEventListener('loadeddata', () => {
+      ok = true;
+      views.home.classList.add('video-on');
+      video.style.opacity = '0';
+      video.muted = true;
+      if (onHome()) { video.play().catch(() => {}); fadeTo(1); }
+    });
+    video.addEventListener('error', () => {
+      ok = false;
+      views.home.classList.remove('video-on');   // 退回 CSS 泡泡
+    });
+    video.addEventListener('timeupdate', () => {
+      const rem = video.duration - video.currentTime;
+      if (!fadingOut && video.duration && rem <= LEAD && rem > 0) {
+        fadingOut = true;
+        fadeTo(0);
+      }
+    });
+    video.addEventListener('ended', () => {
+      video.style.opacity = '0';
+      setTimeout(() => {
+        video.currentTime = 0;
+        if (onHome()) video.play().catch(() => {});
+        fadingOut = false;
+        fadeTo(1);
+      }, 100);
+    });
+    setInterval(() => {
+      if (!ok || document.hidden || !onHome()) return;
+      if (video.paused && !video.ended) { video.play().catch(() => {}); fadeTo(1); }
+    }, 3000);
+    window.__heroVideoCtl = {
+      enter() { if (ok && video.readyState >= 2) { video.play().catch(() => {}); fadeTo(1); } },
+      leave() { if (ok) video.pause(); },
+    };
   }
 
   /* ---------- 抽牌页：命运轮盘（连续插值引擎） ----------
@@ -961,6 +1021,7 @@
 
   renderSpreadGrid();
   renderHomeSky();
+  setupHeroVideo();
   document.body.classList.add('on-home');
   setupCarouselInput();
 })();
