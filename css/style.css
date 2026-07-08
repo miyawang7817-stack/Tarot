@@ -210,11 +210,12 @@ main, header, footer { position: relative; z-index: 1; }
     animation-timing-function: linear, ease-in-out;
     animation-iteration-count: infinite, infinite;
   }
-  .amb .a1 { offset-path: ellipse(37% 32% at 50% 48%); animation-duration: 30s, 7s; animation-delay: 0s, 0s; }
-  .amb .a2 { offset-path: ellipse(37% 32% at 50% 48%); animation-duration: 34s, 9s; animation-delay: -11s, -3s; }
-  .amb .a3 { offset-path: ellipse(37% 32% at 50% 48%); animation-duration: 27s, 8s; animation-delay: -18s, -5s; }
-  .amb .a4 { offset-path: ellipse(21% 16% at 50% 50%); animation-duration: 24s, 6s; animation-delay: -6s, -2s; animation-direction: reverse, normal; }
-  .amb .a5 { offset-path: ellipse(21% 16% at 50% 50%); animation-duration: 29s, 7.5s; animation-delay: -20s, -4s; animation-direction: reverse, normal; }
+  /* 五条独立轨道：圆心 / 半径 / 方向 / 周期全不同，各巡各的区域，边界处偶有交汇 */
+  .amb .a1 { offset-path: ellipse(26% 22% at 34% 40%); animation-duration: 30s, 7s;   animation-delay: 0s, 0s; }
+  .amb .a2 { offset-path: ellipse(24% 20% at 66% 42%); animation-duration: 26s, 9s;   animation-delay: -9s, -3s;  animation-direction: reverse, normal; }
+  .amb .a3 { offset-path: ellipse(22% 24% at 44% 62%); animation-duration: 34s, 8s;   animation-delay: -17s, -5s; }
+  .amb .a4 { offset-path: ellipse(18% 15% at 60% 64%); animation-duration: 22s, 6s;   animation-delay: -6s, -2s;  animation-direction: reverse, normal; }
+  .amb .a5 { offset-path: ellipse(15% 13% at 50% 30%); animation-duration: 18s, 7.5s; animation-delay: -12s, -4s; }
   @keyframes amb-travel {
     from { offset-distance: 0%; }
     to   { offset-distance: 100%; }
