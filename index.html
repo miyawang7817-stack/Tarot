@@ -6,6 +6,9 @@
   <title>塔罗占卜 · 探索你的命运</title>
   <meta name="description" content="纯前端塔罗牌抽卡占卜网站：5 种经典牌阵、3D 翻牌动画、78 张牌正逆位中文解读" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔮</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600&family=Barlow:wght@300;400;500&display=swap" />
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
@@ -13,19 +16,40 @@
 
   <header class="app-header">
     <button class="brand" id="brand-btn" title="回到首页">
-      <span class="brand-icon">🔮</span>
-      <span class="brand-name">塔罗占卜</span>
+      <svg class="brand-icon" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="10" r="7"/>
+        <path d="M8.5 18.5h7l1 2.5h-9z"/>
+        <path d="M13.5 6.2l0.7 1.9 1.9 0.7-1.9 0.7-0.7 1.9-0.7-1.9-1.9-0.7 1.9-0.7z" fill="#fff" stroke="none"/>
+        <path d="M9.4 10.6l0.45 1.2 1.2 0.45-1.2 0.45-0.45 1.2-0.45-1.2-1.2-0.45 1.2-0.45z" fill="#fff" stroke="none" opacity="0.8"/>
+        <path d="M7.2 8.2a5 5 0 0 1 2.3-2.6" opacity="0.5"/>
+      </svg>
+      <span class="brand-name">塔罗</span>
     </button>
   </header>
 
   <main id="app">
 
-    <!-- 首页：选择牌阵 -->
+    <!-- 首页：黑色全屏 hero（背景视频 + 星尘 + 三张倒扣牌入口） -->
     <section id="view-home" class="view">
-      <div class="hero">
-        <h1>今天，想问点什么？</h1>
+      <video id="hero-video" muted playsinline preload="auto"
+        src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260418_080021_d598092b-c4c2-4e53-8e46-94cf9064cd50.mp4"></video>
+      <div class="home-sky" id="home-sky" aria-hidden="true">
+        <span class="meteor m1"></span>
+        <span class="meteor m2"></span>
+        <svg class="cons cl" width="150" height="110" viewBox="0 0 150 110">
+          <polyline points="10,80 40,55 70,70 95,30 135,18" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="0.75"/>
+          <circle cx="10" cy="80" r="2" fill="rgba(255,255,255,0.8)"/><circle cx="40" cy="55" r="1.3" fill="rgba(255,255,255,0.8)"/><circle cx="70" cy="70" r="2" fill="rgba(255,255,255,0.8)"/><circle cx="95" cy="30" r="1.3" fill="rgba(255,255,255,0.8)"/><circle cx="135" cy="18" r="2" fill="rgba(255,255,255,0.8)"/>
+        </svg>
+        <svg class="cons cr" width="150" height="110" viewBox="0 0 150 110">
+          <polyline points="15,20 50,38 72,15 105,55 140,90" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="0.75"/>
+          <circle cx="15" cy="20" r="2" fill="rgba(255,255,255,0.8)"/><circle cx="50" cy="38" r="1.3" fill="rgba(255,255,255,0.8)"/><circle cx="72" cy="15" r="2" fill="rgba(255,255,255,0.8)"/><circle cx="105" cy="55" r="1.3" fill="rgba(255,255,255,0.8)"/><circle cx="140" cy="90" r="2" fill="rgba(255,255,255,0.8)"/>
+        </svg>
       </div>
-      <div class="spread-grid" id="spread-grid"></div>
+      <div class="home-main">
+        <p class="home-headline"><span>窥见</span><span>命运的</span><span>低语</span></p>
+        <div class="home-entries" id="spread-grid"></div>
+      </div>
+      <p class="home-footline">星移 · 月转 · 牌不欺心</p>
     </section>
 
     <!-- 抽牌页：洗牌 + 扇形选牌 -->

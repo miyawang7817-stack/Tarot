@@ -44,28 +44,120 @@
     Object.entries(views).forEach(([key, el]) =>
       el.classList.toggle('hidden', key !== name)
     );
+    document.body.classList.toggle('on-home', name === 'home');
+    if (window.__heroVideoCtl) {
+      if (name === 'home') window.__heroVideoCtl.enter();
+      else window.__heroVideoCtl.leave();
+    }
     window.scrollTo({ top: 0 });
   }
 
   /* ---------- 首页：牌阵选择 ---------- */
 
+  const HOME_ICONS = {
+    sun: '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>',
+    cards: '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="7.5" y="3.5" width="9" height="14" rx="1.5" transform="rotate(-8 12 10.5)"/><rect x="9" y="6.5" width="9" height="14" rx="1.5" transform="rotate(8 13.5 13.5)"/></svg>',
+    heart: '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7-4.6-9.2-8.6C1.2 8.6 3 5.5 6.2 5.5c2 0 3.3 1 4 2.2.3.5.9.5 1.2 0 .7-1.2 2-2.2 4-2.2 3.2 0 5 3.1 3.4 5.9C19 15.4 12 20 12 20z"/></svg>',
+  };
+  // 设计稿文案：三张倒扣的牌入口（顺序对应 SPREADS）
+  const HOME_ENTRIES = [
+    { icon: 'sun',   title: '单张指引', desc: '一张牌，点一盏小灯',   meta: '\u2726\uFE0E 1 张牌 · 今日指引' },
+    { icon: 'cards', title: '三张牌阵', desc: '来路 · 当下 · 前方',   meta: '\u2726\uFE0E 3 张牌 · 过去 / 现在 / 未来' },
+    { icon: 'heart', title: '关系牌阵', desc: '你与 TA，牌想说的话', meta: '\u2726\uFE0E 5 张牌 · 感情与关系' },
+  ];
+
   function renderSpreadGrid() {
     const grid = $('#spread-grid');
     grid.innerHTML = '';
-    SPREADS.forEach((spread) => {
+    HOME_ENTRIES.forEach((entry, i) => {
+      const spread = SPREADS[i];
       const btn = document.createElement('button');
-      btn.className = 'spread-card';
+      btn.className = 'entry-card';
       btn.innerHTML = `
-        <span class="spread-icon">${spread.icon}</span>
-        <div class="spread-name">${spread.nameZh}</div>
-        <div class="spread-desc">${spread.descriptionZh}</div>
-        <div class="spread-count">✦ ${spread.positions.length} 张牌 · ${spread.positions
-          .map((p) => p.name)
-          .join(' / ')}</div>
+        <span class="entry-frame"></span>
+        <span class="entry-corner tl">\u2726\uFE0E</span>
+        <span class="entry-corner tr">\u2726\uFE0E</span>
+        <span class="entry-corner bl">\u2726\uFE0E</span>
+        <span class="entry-corner br">\u2726\uFE0E</span>
+        <span class="entry-icon">${HOME_ICONS[entry.icon]}</span>
+        <span class="entry-body">
+          <span class="entry-title">${entry.title}</span>
+          <span class="entry-desc" style="display:block">${entry.desc}</span>
+          <span class="entry-meta" style="display:block">${entry.meta}</span>
+        </span>
       `;
       btn.addEventListener('click', () => startDraw(spread));
       grid.appendChild(btn);
     });
+  }
+
+  /* 首页星尘 */
+  function renderHomeSky() {
+    const sky = $('#home-sky');
+    if (!sky || sky.querySelector('.tw')) return;
+    const rand = (a, b) => a + Math.random() * (b - a);
+    for (let i = 0; i < 26; i++) {
+      const s = document.createElement('span');
+      s.className = 'tw';
+      const size = rand(1.5, 3).toFixed(1);
+      s.style.left = rand(2, 98).toFixed(1) + '%';
+      s.style.top = rand(3, 60).toFixed(1) + '%';
+      s.style.width = size + 'px';
+      s.style.height = size + 'px';
+      s.style.setProperty('--d', rand(2.5, 6).toFixed(1) + 's');
+      s.style.setProperty('--dl', rand(0, 5).toFixed(1) + 's');
+      sky.appendChild(s);
+    }
+  }
+
+  /* 背景视频：循环边界淡入淡出 + 断流自愈（改编自设计稿逻辑） */
+  function setupHeroVideo() {
+    const video = $('#hero-video');
+    if (!video) return;
+    const FADE_MS = 500, LEAD = 0.55;
+    let raf = null, fadingOut = false;
+    const onHome = () => !views.home.classList.contains('hidden');
+    const fadeTo = (target, duration = FADE_MS) => {
+      if (raf) cancelAnimationFrame(raf);
+      const from = parseFloat(video.style.opacity || '0');
+      const start = performance.now();
+      const step = (t) => {
+        const p = Math.min(1, (t - start) / duration);
+        video.style.opacity = String(from + (target - from) * p);
+        if (p < 1) raf = requestAnimationFrame(step);
+      };
+      raf = requestAnimationFrame(step);
+    };
+    video.addEventListener('loadeddata', () => {
+      video.style.opacity = '0';
+      video.muted = true;
+      if (onHome()) { video.play().catch(() => {}); fadeTo(1); }
+    });
+    video.addEventListener('timeupdate', () => {
+      const rem = video.duration - video.currentTime;
+      if (!fadingOut && video.duration && rem <= LEAD && rem > 0) {
+        fadingOut = true;
+        fadeTo(0);
+      }
+    });
+    video.addEventListener('ended', () => {
+      video.style.opacity = '0';
+      setTimeout(() => {
+        video.currentTime = 0;
+        if (onHome()) video.play().catch(() => {});
+        fadingOut = false;
+        fadeTo(1);
+      }, 100);
+    });
+    setInterval(() => {
+      if (document.hidden || !onHome()) return;
+      if (video.error) { video.load(); }
+      else if (video.paused && !video.ended) { video.play().catch(() => {}); fadeTo(1); }
+    }, 3000);
+    window.__heroVideoCtl = {
+      enter() { if (video.readyState >= 2) { video.play().catch(() => {}); fadeTo(1); } },
+      leave() { video.pause(); },
+    };
   }
 
   /* ---------- 抽牌页：命运轮盘（连续插值引擎） ----------
@@ -633,5 +725,8 @@
   });
 
   renderSpreadGrid();
+  renderHomeSky();
+  setupHeroVideo();
+  document.body.classList.add('on-home');
   setupCarouselInput();
 })();
