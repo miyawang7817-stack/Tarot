@@ -112,6 +112,7 @@ main, header, footer { position: relative; z-index: 1; }
   letter-spacing: 0.26em;
 }
 .brand-name { font-weight: 500; line-height: 1; }
+.brand[hidden] { display: none; }
 
 
 /* ============ 视图切换 ============ */
