@@ -491,12 +491,15 @@
       const entry = state.picked[i];
       const slot = document.createElement('div');
       slot.className = `slot slot-${i + 1} materialize`;
-      slot.style.setProperty('--mat-delay', (i * 220) + 'ms');
+      slot.style.setProperty('--mat-delay', (i * 320) + 'ms');
       slot.innerHTML = `
         <div class="slot-label"><span class="slot-order">${i + 1}</span><b>${pos.name}</b></div>
         <button class="flip-card" aria-label="翻开「${pos.name}」位置的牌">
+          <span class="mat-halo" aria-hidden="true"></span>
           <span class="flip-flash"></span>
-          <span class="mat-smoke" aria-hidden="true"><b class="s1"></b><b class="s2"></b><b class="s3"></b></span>
+          <span class="flip-ring" aria-hidden="true"></span>
+          <span class="mat-veil" aria-hidden="true"></span>
+          <span class="mat-smoke" aria-hidden="true"><b class="s1"></b><b class="s2"></b><b class="s3"></b><b class="s4"></b><b class="s5"></b></span>
           <div class="flip-inner">
             <div class="flip-face flip-back"><span class="card-back"></span></div>
             <div class="flip-face flip-front ${entry.reversed ? 'reversed' : ''}">
@@ -510,7 +513,7 @@
       flipBtn.addEventListener('click', () => flipCard(i, slot, flipBtn));
       board.appendChild(slot);
       // 凝聚过程中伴随金尘向右上飘散
-      setTimeout(() => spawnBurst(flipBtn, 'drift', 14), i * 220 + 120);
+      setTimeout(() => spawnBurst(flipBtn, 'drift', 26), i * 320 + 150);
     });
   }
 
@@ -530,7 +533,7 @@
         delay = Math.random() * 420;
       } else {
         const ang = Math.random() * Math.PI * 2;
-        const dist = 55 + Math.random() * 120;
+        const dist = 70 + Math.random() * 170;
         px = Math.cos(ang) * dist;
         py = Math.sin(ang) * dist;
         delay = 170 + Math.random() * 220;
@@ -550,7 +553,7 @@
     if (flipBtn.classList.contains('flipped')) return;
     flipBtn.classList.add('flipped');
     slot.classList.add('revealed');
-    spawnBurst(flipBtn);
+    spawnBurst(flipBtn, 'radial', 30);
 
     const entry = state.picked[index];
     const orientCls = entry.reversed ? 'reversed' : 'upright';
