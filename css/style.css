@@ -112,6 +112,14 @@ body.on-home .app-header { border-bottom-color: transparent; background: transpa
   z-index: 0;
   opacity: 0;
 }
+/* 首页氛围光斑（复用抽牌页的公转轨道） */
+#view-home .amb-home { position: absolute; inset: -10%; z-index: 1; }
+.amb-home .a1 { background: hsl(266 55% 46% / 0.34); }
+.amb-home .a2 { background: hsl(46 55% 48% / 0.26); }
+.amb-home .a3 { background: hsl(230 50% 50% / 0.28); }
+.amb-home .a4 { background: hsl(320 45% 45% / 0.22); }
+.amb-home .a5 { background: hsl(46 60% 52% / 0.24); }
+
 /* 星尘 / 流星 / 星座 */
 .home-sky { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
 .home-sky .tw {
@@ -934,7 +942,25 @@ body.on-home .app-header { border-bottom-color: transparent; background: transpa
   color: #edb9b9;
   background: rgba(229, 143, 143, 0.07);
 }
+.interp-lead { font-size: 15px; line-height: 1.9; color: var(--purple); margin-bottom: 10px; }
 .interp-desc { font-size: 16px; line-height: 2.0; color: var(--text); }
+.interp-advice {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed rgba(168, 130, 255, 0.25);
+  font-size: 14.5px;
+  line-height: 1.8;
+  color: var(--gold-bright);
+  letter-spacing: 0.5px;
+}
+.interp-advice::before { content: '✦ 牌的低语 — '; color: var(--gold); }
+.interp-card.summary-card {
+  border-left-color: var(--purple);
+  background: rgba(38, 26, 70, 0.78);
+}
+.summary-title { color: var(--gold-bright); font-size: 19px; letter-spacing: 3px; margin-bottom: 12px; }
+.summary-body p { font-size: 15.5px; line-height: 2.05; color: var(--text); margin-bottom: 8px; }
+.summary-body p:last-child { margin-bottom: 0; }
 
 /* ============ 响应式 ============ */
 @media (max-width: 720px) {

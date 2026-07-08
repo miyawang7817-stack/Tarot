@@ -666,7 +666,101 @@
     state.flippedCount++;
     if (state.flippedCount === state.spread.positions.length) {
       $('#btn-flip-all').disabled = true;
+      setTimeout(renderSummary, 500);
     }
+  }
+
+  /* ---------- 解读文案生成 ----------
+     四层结构：位置叙事引子 → 牌义正文（正逆位分别深挖）→ 行动低语 → （全部翻开后）整体启示。
+     模板按牌号做确定性轮换，同一次占卜里语气不重复。 */
+
+  const pick = (arr, seed) => arr[((seed % arr.length) + arr.length) % arr.length];
+
+  const LEADS = {
+    '今日指引': [
+      (c, o) => `今天为你翻开的是「${c}」${o}。它不预言一整天，只照亮你今天最需要看见的那个角落——`,
+      (c, o) => `「${c}」${o}来做你今天的引路牌。别急着问吉凶，先看它把光打在了哪里——`,
+    ],
+    '过去': [
+      (c, o) => `落在「过去」的「${c}」${o}，说的是你一路走来的底色——那段经历留下的不只是记忆，还有一股至今仍在起作用的惯性。`,
+      (c, o) => `「过去」的位置翻出「${c}」${o}。有些事你以为翻篇了，牌说：它还在参与你今天的决定。`,
+    ],
+    '现在': [
+      (c, o) => `「现在」的位置上是「${c}」${o}——这是你此刻正身处其中、却未必自知的能量场。`,
+      (c, o) => `此刻的你，被「${c}」${o}描述着。留意今天让你情绪波动最大的那件事，它多半就是这张牌在说的话。`,
+    ],
+    '未来': [
+      (c, o) => `指向「未来」的「${c}」${o}并非注定——它显示的是：如果一切照现在的样子走下去，大概率会抵达的风景。`,
+      (c, o) => `「未来」翻出「${c}」${o}。把它当成路标而不是判决书：方向盘还在你手里。`,
+    ],
+    '你自己': [
+      (c, o) => `代表你的是「${c}」${o}——它映出的是你在这段关系里真实的姿态，可能和你自我感觉的不太一样。`,
+      (c, o) => `你的位置上是「${c}」${o}。先诚实地对照一下：这像不像那个在关系里的你？`,
+    ],
+    '对方': [
+      (c, o) => `TA 的位置翻出「${c}」${o}——注意，这是牌眼中的 TA，而不是你以为的 TA。`,
+      (c, o) => `「${c}」${o}站在对方的位置上。试着用这张牌重新看 TA 最近的一次沉默或爆发。`,
+    ],
+    '关系现状': [
+      (c, o) => `你们之间此刻的场域，由「${c}」${o}描述——关系是两个人共同酿出来的气候，谁都不是旁观者。`,
+    ],
+    '挑战': [
+      (c, o) => `横在你们中间的功课是「${c}」${o}。挑战牌不是指责谁，它指出的是这段关系此刻最疼的那根筋。`,
+    ],
+  };
+
+  function buildLead(posName, entry, seed) {
+    const o = entry.reversed ? '（逆位）' : '（正位）';
+    const templates = LEADS[posName] || [
+      (c, oo) => `这个位置上翻出了「${c}」${oo}——`,
+    ];
+    return pick(templates, seed)(entry.card.nameZh, o);
+  }
+
+  function buildBody(posName, entry, seed) {
+    const { card } = entry;
+    const up = card.keywordsUpright;
+    const rv = card.keywordsReversed;
+    if (!entry.reversed) {
+      const flow = pick([
+        `此刻它的能量是顺向的：「${up[0]}」与「${up[1] || up[0]}」正在（或即将）在你的处境里显形。`,
+        `牌面向上，通道是通的——「${up[0]}」不是等来的运气，是你已经具备、只差承认的东西。`,
+        `正位意味着这股力量站在你这边：越主动使用「${up[0]}」，它回馈得越快。`,
+      ], seed);
+      return `${card.descriptionZh}${flow}`;
+    }
+    const r0 = rv[0] || '停滞';
+    const r1 = rv[1] || r0;
+    const r2 = rv[2] || r1;
+    const block = pick([
+      `但它以逆位出现——同一股能量此刻被卡住、转了向，或用力过了头。你可能正体验到：${r0}、${r1}，甚至${r2}。`,
+      `逆位翻转了它的表达：本该流动的部分淤住了。对照看看，最近是否有「${r0}」或「${r1}」的影子？`,
+      `牌面倒转不是凶兆，它是一面提醒镜：${r0}的背后，往往藏着没被承认的需要。`,
+    ], seed);
+    const heal = pick([
+      `逆位的功课只有一个——先承认它在，再给它一个出口，而不是压下去。`,
+      `处理逆位能量最忌硬推：先松，后通，再走。`,
+      `当你能对人说出「我最近有点${r0}」时，这张牌就开始转正了。`,
+    ], seed + 1);
+    return `${card.descriptionZh}${block}${heal}`;
+  }
+
+  function buildAdvice(entry, seed) {
+    const { card } = entry;
+    if (!entry.reversed) {
+      const kw = pick(card.keywordsUpright, seed);
+      return pick([
+        `把「${kw}」带进今天的一个具体决定里，哪怕很小。`,
+        `接下来三天，允许自己更「${kw}」一点——观察发生了什么。`,
+        `今晚睡前回看：今天哪一刻，你已经在「${kw}」了？`,
+      ], seed);
+    }
+    const rkw = pick(card.keywordsReversed, seed);
+    return pick([
+      `当你又想「${rkw}」时，停三秒，问问自己此刻在怕什么。`,
+      `本周试着做一件与「${rkw}」相反的小事，不求彻底，只求松动。`,
+      `把「${rkw}」写下来放在看得见的地方——被看见的情绪，杀伤力减半。`,
+    ], seed);
   }
 
   function appendInterpretation(index) {
@@ -675,6 +769,7 @@
     const { card } = entry;
     const keywords = entry.reversed ? card.keywordsReversed : card.keywordsUpright;
     const orientTxt = entry.reversed ? '逆位' : '正位';
+    const seed = card.number + index * 3 + (entry.reversed ? 7 : 0);
 
     const item = document.createElement('article');
     item.className = 'interp-card' + (entry.reversed ? ' is-reversed' : '');
@@ -684,9 +779,90 @@
         <span class="interp-title">${card.nameZh}（${orientTxt}）</span>
         <span class="interp-en">${card.nameEn}</span>
       </div>
-      <p class="interp-pos-meaning">${pos.meaning}</p>
+      <p class="interp-lead">${buildLead(pos.name, entry, seed)}</p>
       <div class="keywords">${keywords.map((k) => `<span class="kw">${k}</span>`).join('')}</div>
-      <p class="interp-desc">${card.descriptionZh}</p>
+      <p class="interp-desc">${buildBody(pos.name, entry, seed)}</p>
+      <p class="interp-advice">${buildAdvice(entry, seed)}</p>
+    `;
+    $('#interpretations').appendChild(item);
+  }
+
+  /* 整体启示：全部翻开后，把几张牌串成一条故事线 */
+  const SUIT_FIELD = {
+    wands: '行动与欲望', cups: '感受与关系', swords: '思绪与沟通', pentacles: '现实与钱、身体',
+  };
+  function buildSummary() {
+    const picks = state.picked;
+    const total = picks.length;
+    const majors = picks.filter((p) => p.card.arcana === 'major').length;
+    const reversedN = picks.filter((p) => p.reversed).length;
+    const suitCount = {};
+    picks.forEach((p) => { if (p.card.suit) suitCount[p.card.suit] = (suitCount[p.card.suit] || 0) + 1; });
+    const domSuit = Object.entries(suitCount).sort((x, y) => y[1] - x[1])[0];
+    const out = [];
+
+    // 能量层级
+    if (total > 1 && majors >= Math.ceil(total / 2)) {
+      out.push(`这次抽出的牌里有 ${majors} 张大阿卡纳——这通常意味着你问的不是一件日常小事，它牵动的是更长线的人生课题，急不来，也躲不掉。`);
+    } else if (total > 1 && majors === 0) {
+      out.push(`全部是小阿卡纳：答案不在宏大的命运叙事里，而藏在日常的具体动作中——一次谈话、一个安排、一个小决定。`);
+    }
+    // 领域倾向
+    if (domSuit && domSuit[1] >= 2) {
+      out.push(`牌面明显偏向「${SUIT_FIELD[domSuit[0]]}」的领域——不管你问的是什么，真正该处理的战场在这里。`);
+    }
+    // 顺逆基调
+    if (reversedN === 0) {
+      out.push(`${total > 1 ? '所有牌' : '牌'}都以正位出现，通道是通的：此刻你更需要的是行动，而不是继续等一个「更好的时机」。`);
+    } else if (reversedN === total) {
+      out.push(`全部逆位——先停一停。眼下的关键词是「疏通」而不是「用力」，把卡住的部分一件件松开，局面自己会动。`);
+    } else if (reversedN >= Math.ceil(total / 2)) {
+      out.push(`逆位偏多：不是运气差，而是有几股能量在打结。顺序很重要——先处理逆位牌指出的堵点，正位的好牌才接得住你。`);
+    } else if (reversedN > 0) {
+      const revPos = picks.map((p, i) => (p.reversed ? state.spread.positions[i].name : null)).filter(Boolean).join('」「');
+      out.push(`整体以正位为主，只有「${revPos}」带着逆位——它不是坏消息，而是一个精确的坐标：这次占卜真正的功课，就落在那一处。`);
+    }
+    // 牌阵专属故事线
+    if (state.spread.id === 'three-card' && total === 3) {
+      const [past, now, future] = picks;
+      if (past.reversed && !future.reversed) {
+        out.push(`最值得注意的是走向：过去的牌是逆位，未来的牌转为正位——你正在走出一段拧巴的时期，而且未来的牌已经伸手接住你了。别在快出隧道的地方回头。`);
+      } else if (!past.reversed && future.reversed) {
+        out.push(`一个提醒：过去顺、未来逆——现在的轨迹里埋着一个会翻转的变量，它大概率就是「现在」那张牌说的那件事。趁早正视它，剧本还来得及改。`);
+      } else if (!past.reversed && !future.reversed && now.reversed) {
+        out.push(`起点与去向都是正位，卡点只集中在「现在」——中间那张逆位牌就是你此刻要过的关。它不挡路，它就是路：过了这一处，前后自然连成顺途。`);
+      } else if (!past.reversed && !future.reversed) {
+        out.push(`三张牌一路正位，轨迹是延续向上的：你不需要改变方向，只需要别停。`);
+      } else {
+        out.push(`过去与未来都带着逆位——模式在重复。打破它的钥匙在中间那张「现在」的牌里：改变今天的应对方式，就是改写未来的方式。`);
+      }
+    }
+    if (state.spread.id === 'relationship' && total === 5) {
+      const [me, ta] = picks;
+      if (me.card.suit && me.card.suit === ta.card.suit) {
+        out.push(`你和 TA 的牌来自同一花色——你们其实在同一个频道上，只是表达方式不同。很多「不合」只是翻译问题。`);
+      } else if (me.reversed && ta.reversed) {
+        out.push(`你们两人的牌都是逆位：都带着各自卡住的能量进场。先各自松绑，再谈「我们」——顺序反了，谈什么都费劲。`);
+      } else if (me.card.arcana === 'major' && ta.card.arcana !== 'major') {
+        out.push(`你的牌是大阿卡纳而 TA 的不是——这段关系此刻对你的课题更重。它在塑造你，别只把注意力放在对方身上。`);
+      } else if (ta.card.arcana === 'major' && me.card.arcana !== 'major') {
+        out.push(`TA 的牌是大阿卡纳——这段关系正在深刻地搅动 TA。TA 的反复，也许不是针对你。`);
+      }
+    }
+    if (state.spread.id === 'single') {
+      out.push(`单张牌不解释一生，它只负责点亮今天。今晚睡前回看一眼：今天发生的哪件事，对上了这张牌？那一刻，就是牌想跟你说话的地方。`);
+    }
+    return out;
+  }
+
+  function renderSummary() {
+    const paras = buildSummary();
+    if (!paras.length) return;
+    const item = document.createElement('article');
+    item.className = 'interp-card summary-card';
+    item.innerHTML = `
+      <div class="summary-title">✦ 整体启示</div>
+      <div class="summary-body">${paras.map((p) => `<p>${p}</p>`).join('')}</div>
     `;
     $('#interpretations').appendChild(item);
   }
