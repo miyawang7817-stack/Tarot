@@ -172,7 +172,8 @@
     car.inertia = false;
     car.locked = false;
     car.snapping = false;
-    car.lastTouch = performance.now() - IDLE_DELAY + 1100;
+    car.lastTouch = performance.now() - IDLE_DELAY + 250;   // 进场即启动轮播（与发牌淡入重叠）
+    car.lastAuto = 0;
     $('#draw-title').textContent = spread.nameZh;
     showView('draw');          // 先显示视图，保证测量到真实尺寸
     buildCarousel(true);
@@ -490,7 +491,7 @@
       el.remove();
       if (finished) { startReading(); return; }
       car.locked = false;
-      car.lastTouch = performance.now() - IDLE_DELAY + 1200;
+      car.lastTouch = performance.now() - IDLE_DELAY + 900;
     }, 780);
   }
 
@@ -992,7 +993,8 @@
     car.inertia = false;
     car.locked = false;
     car.snapping = false;
-    car.lastTouch = performance.now();
+    car.lastTouch = performance.now() - IDLE_DELAY + 250;
+    car.lastAuto = 0;
     buildCarousel(true);
     renderTray();
     updateDrawProgress();
