@@ -223,8 +223,8 @@
     const blobs = document.querySelectorAll('#ring-area .amb i');
     if (!blobs.length) return;
     const cfg = [
-      [h, 0.40], [(h + 22) % 360, 0.32], [(h + 338) % 360, 0.30],
-      [(h + 34) % 360, 0.26], [h, 0.28],
+      [h, 0.46], [(h + 22) % 360, 0.38], [(h + 338) % 360, 0.36],
+      [(h + 34) % 360, 0.32], [h, 0.34],
     ];
     blobs.forEach((b, i) => {
       const [hh, al] = cfg[i % cfg.length];
