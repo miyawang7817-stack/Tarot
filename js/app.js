@@ -112,7 +112,7 @@
     }
   }
 
-  /* 首页背景视频：原生 loop 循环，加载成功即淡入；失败退回 CSS 泡泡 */
+  /* 首页背景视频：原生 loop 循环，加载成功即淡入；失败保持纯黑星空 */
   function setupHeroVideo() {
     const video = $('#hero-video');
     if (!video) return;
@@ -123,7 +123,7 @@
       if (onHome()) video.play().catch(() => {});
     });
     video.addEventListener('error', () => {
-      views.home.classList.remove('video-on');   // 退回 CSS 泡泡
+      views.home.classList.remove('video-on');   // 加载失败：保持纯黑星空
     });
     setInterval(() => {
       if (document.hidden || !onHome()) return;
