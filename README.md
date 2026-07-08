@@ -4,7 +4,6 @@
 
 一个**零依赖、纯静态**的塔罗牌抽卡占卜网站。无需构建、无需服务器，直接双击 `index.html` 即可使用，也可以一键部署到 GitHub Pages。
 
-参考项目：[Lurell/tarot-vibecoding](https://github.com/Lurell/tarot-vibecoding)（78 张像素风牌面图与中文牌义数据源自该项目，MIT License）。
 
 ## ✨ 功能
 
