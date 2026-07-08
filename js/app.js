@@ -500,6 +500,7 @@
           <span class="flip-ring" aria-hidden="true"></span>
           <span class="mat-veil" aria-hidden="true"></span>
           <span class="mat-smoke" aria-hidden="true"><b class="s1"></b><b class="s2"></b><b class="s3"></b><b class="s4"></b><b class="s5"></b></span>
+          <span class="idle-sparks" aria-hidden="true"><i>✦</i><i>✦</i><i>✦</i></span>
           <div class="flip-inner">
             <div class="flip-face flip-back"><span class="card-back"></span></div>
             <div class="flip-face flip-front ${entry.reversed ? 'reversed' : ''}">
@@ -517,36 +518,43 @@
     });
   }
 
-  /* 金色光尘粒子。radial：翻牌时向四周迸散；drift：凝聚/升起时向右上飘散 */
+  /* 金色光尘粒子。radial：翻牌时向四周迸散；drift：凝聚/升起时向右上飘散。
+     圆点火星与 ✦ 星形火花混合，分 2-3 波错峰出场（等光罩衰减后登场，不与闪光抢戏），
+     一半粒子带忽明忽暗的闪烁飞行 */
   function spawnBurst(host, mode = 'radial', count = 18) {
     if (REDUCED_MOTION) return;
     const burst = document.createElement('span');
     burst.className = 'flip-burst';
     for (let i = 0; i < count; i++) {
+      const isStar = Math.random() < 0.38;
       const p = document.createElement('i');
+      if (isStar) { p.className = 'star'; p.textContent = '✦'; }
       let px, py, delay;
+      const wave = i % 3;
       if (mode === 'drift') {
         const ang = Math.PI * (0.08 + Math.random() * 0.42);   // 右上扇区
-        const dist = 45 + Math.random() * 100;
+        const dist = 50 + Math.random() * 115;
         px = Math.cos(ang) * dist;
         py = -Math.sin(ang) * dist;
-        delay = Math.random() * 420;
+        delay = 350 + wave * 220 + Math.random() * 260;
       } else {
         const ang = Math.random() * Math.PI * 2;
-        const dist = 70 + Math.random() * 170;
+        const dist = 70 + Math.random() * 180;
         px = Math.cos(ang) * dist;
         py = Math.sin(ang) * dist;
-        delay = 170 + Math.random() * 220;
+        delay = 200 + wave * 190 + Math.random() * 200;
       }
       p.style.setProperty('--px', px.toFixed(0) + 'px');
       p.style.setProperty('--py', py.toFixed(0) + 'px');
-      p.style.setProperty('--ps', (2.5 + Math.random() * 5).toFixed(1) + 'px');
-      p.style.setProperty('--pd', (550 + Math.random() * 500).toFixed(0) + 'ms');
+      p.style.setProperty('--ps', (3 + Math.random() * 5.5).toFixed(1) + 'px');
+      p.style.setProperty('--pfs', (10 + Math.random() * 9).toFixed(0) + 'px');
+      p.style.setProperty('--pd', (750 + Math.random() * 750).toFixed(0) + 'ms');
       p.style.setProperty('--pdelay', delay.toFixed(0) + 'ms');
+      if (Math.random() < 0.5) p.style.animationName = 'particle-fly-tw';
       burst.appendChild(p);
     }
     host.appendChild(burst);
-    setTimeout(() => burst.remove(), 1800);
+    setTimeout(() => burst.remove(), 2600);
   }
 
   function flipCard(index, slot, flipBtn) {

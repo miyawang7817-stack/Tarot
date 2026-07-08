@@ -650,6 +650,53 @@ main, header, footer { position: relative; z-index: 1; }
   18%  { opacity: 1; }
   100% { transform: translate(calc(-50% + var(--px, 0px)), calc(-50% + var(--py, 0px))) scale(0); opacity: 0; }
 }
+/* 闪烁飞行：途中忽明忽暗，像风中火星 */
+@keyframes particle-fly-tw {
+  0%   { transform: translate(-50%, -50%) scale(0.4) rotate(0deg); opacity: 0; }
+  14%  { opacity: 1; }
+  30%  { opacity: 0.45; }
+  46%  { opacity: 1; }
+  62%  { opacity: 0.5; }
+  78%  { opacity: 0.95; }
+  100% { transform: translate(calc(-50% + var(--px, 0px)), calc(-50% + var(--py, 0px))) scale(0.1) rotate(160deg); opacity: 0; }
+}
+/* 星形火花 */
+.flip-burst i.star {
+  width: auto;
+  height: auto;
+  background: none;
+  box-shadow: none;
+  border-radius: 0;
+  font-style: normal;
+  font-size: var(--pfs, 13px);
+  line-height: 1;
+  color: #ffedb8;
+  text-shadow: 0 0 10px rgba(245, 221, 154, 0.95), 0 0 24px rgba(227, 196, 110, 0.5);
+}
+/* 常驻微光：牌背上的小星火轻轻闪烁（翻开后消失） */
+.idle-sparks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 6;
+}
+.idle-sparks i {
+  position: absolute;
+  font-style: normal;
+  color: #ffedb8;
+  text-shadow: 0 0 9px rgba(245, 221, 154, 0.9), 0 0 20px rgba(227, 196, 110, 0.4);
+  opacity: 0;
+  font-size: 12px;
+  animation: idle-tw 3.6s ease-in-out infinite;
+}
+.idle-sparks i:nth-child(1) { left: 16%; top: 20%; animation-delay: 0.5s; }
+.idle-sparks i:nth-child(2) { right: 13%; top: 56%; font-size: 9px; animation-delay: 1.8s; }
+.idle-sparks i:nth-child(3) { left: 28%; bottom: 13%; font-size: 10px; animation-delay: 2.7s; }
+@keyframes idle-tw {
+  0%, 100% { opacity: 0; transform: scale(0.5) rotate(0deg); }
+  50%      { opacity: 0.85; transform: scale(1.15) rotate(45deg); }
+}
+.flip-card.flipped .idle-sparks { display: none; }
 /* 翻开瞬间的金光一闪 */
 .flip-flash {
   position: absolute;
@@ -689,7 +736,7 @@ main, header, footer { position: relative; z-index: 1; }
   100% { opacity: 0; transform: scale(1.5); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .flip-burst i, .flip-card.flipped .flip-flash { animation: none; }
+  .flip-burst i, .flip-card.flipped .flip-flash, .idle-sparks i { animation: none; }
 }
 
 .slot-name {
