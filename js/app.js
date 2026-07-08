@@ -804,11 +804,22 @@
   function buildBody(posName, entry, seed) {
     const { card } = entry;
     const o = entry.reversed ? 'rv' : 'up';
-    if (card.arcana === 'major') return MAJOR_TALK[card.number][o];
-    if (card.number <= 10) return NUM_TALK[card.number][o](SUIT_CTX[card.suit]);
-    const ct = COURT_TALK[card.rank];
-    const frag = (o === 'rv' && ct.rvFrag) ? ct.rvFrag[card.suit] : ct.frag[card.suit];
-    return ct[o](frag);
+    let core;
+    if (card.arcana === 'major') core = MAJOR_TALK[card.number][o];
+    else if (card.number <= 10) core = NUM_TALK[card.number][o](SUIT_CTX[card.suit]);
+    else {
+      const ct = COURT_TALK[card.rank];
+      const frag = (o === 'rv' && ct.rvFrag) ? ct.rvFrag[card.suit] : ct.frag[card.suit];
+      core = ct[o](frag);
+    }
+    const lore = (typeof LORE !== 'undefined') && LORE[card.id];
+    if (!lore) return core;
+    // 意象层（Waite）开场 + 牌义正文；关系牌阵再织入感情语境层（Bunning）
+    let out = `<span class="interp-img">牌面上：${lore.img}</span>${core}`;
+    if (state.spread && state.spread.id === 'relationship') {
+      out += `<span class="interp-love">${entry.reversed ? lore.loveRv : lore.loveUp}</span>`;
+    }
+    return out;
   }
 
   /* 行动低语：按花色给一个当天就能做的具体动作 */

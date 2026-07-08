@@ -1064,6 +1064,20 @@ body.on-home .stars { display: none; }
   color: #edb9b9;
   background: rgba(229, 143, 143, 0.07);
 }
+.interp-img {
+  display: block;
+  color: var(--text-dim);
+  font-style: normal;
+  font-size: 0.95em;
+  margin-bottom: 8px;
+  padding-left: 12px;
+  border-left: 2px solid rgba(227, 196, 110, 0.35);
+}
+.interp-love {
+  display: block;
+  margin-top: 8px;
+  color: #e8b7c9;
+}
 .interp-lead { font-size: 15px; line-height: 1.9; color: var(--purple); margin-bottom: 10px; }
 .interp-desc { font-size: 16px; line-height: 2.0; color: var(--text); }
 .interp-advice {
