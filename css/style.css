@@ -11,8 +11,8 @@
   --text: #ece6f7;
   --text-dim: #a99cc7;
   --danger: #e58f8f;
-  --card-w: 108px;
-  --card-h: 180px;
+  --card-w: 156px;
+  --card-h: 260px;
   --radius: 14px;
 }
 
@@ -444,9 +444,9 @@ main, header, footer { position: relative; z-index: 1; }
 .btn-ghost:hover { color: var(--text); border-color: rgba(168, 130, 255, 0.5); }
 
 /* ============ 解读页 ============ */
-.reading-header { text-align: center; margin-bottom: 26px; }
-.reading-header h2 { color: var(--gold-bright); letter-spacing: 4px; font-size: clamp(20px, 3vw, 26px); }
-.reading-hint { margin-top: 10px; color: var(--text-dim); font-size: 13.5px; letter-spacing: 1px; }
+.reading-header { text-align: center; margin-bottom: 30px; }
+.reading-header h2 { color: var(--gold-bright); letter-spacing: 5px; font-size: clamp(24px, 3.4vw, 34px); }
+.reading-hint { margin-top: 12px; color: var(--text-dim); font-size: 15px; letter-spacing: 1px; }
 
 /* 牌桌布局 */
 .board {
@@ -454,20 +454,20 @@ main, header, footer { position: relative; z-index: 1; }
   flex-wrap: wrap;
   justify-content: center;
   align-items: flex-start;
-  gap: clamp(14px, 2.5vw, 26px);
-  padding: 8px 0 4px;
+  gap: clamp(20px, 3.4vw, 44px);
+  padding: 10px 0 6px;
 }
 
 .slot {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 9px;
-  width: calc(var(--card-w) + 14px);
+  gap: 12px;
+  width: calc(var(--card-w) + 20px);
 }
 .slot-label {
-  font-size: 13px;
-  letter-spacing: 2px;
+  font-size: 15px;
+  letter-spacing: 3px;
   color: var(--text-dim);
   text-align: center;
 }
@@ -524,9 +524,9 @@ main, header, footer { position: relative; z-index: 1; }
 }
 
 .slot-name {
-  min-height: 34px;
+  min-height: 40px;
   text-align: center;
-  font-size: 12.5px;
+  font-size: 15px;
   line-height: 1.5;
   letter-spacing: 1px;
   color: var(--text);
@@ -537,9 +537,9 @@ main, header, footer { position: relative; z-index: 1; }
 .slot.revealed .slot-name { opacity: 1; transform: none; }
 .orient-tag {
   display: inline-block;
-  padding: 1px 8px;
+  padding: 2px 10px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: 12.5px;
   letter-spacing: 1px;
   margin-left: 5px;
   vertical-align: 1px;
@@ -549,16 +549,19 @@ main, header, footer { position: relative; z-index: 1; }
 
 /* 牌义解读列表 */
 .interpretations {
-  margin-top: 34px;
+  margin-top: 42px;
   display: grid;
-  gap: 16px;
+  gap: 20px;
+  max-width: 860px;
+  margin-left: auto;
+  margin-right: auto;
 }
 .interp-card {
   border: 1px solid var(--panel-border);
   border-left: 3px solid var(--gold);
   border-radius: var(--radius);
   background: var(--panel);
-  padding: 20px 22px;
+  padding: 26px 30px;
   animation: interp-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) backwards;
 }
 @keyframes interp-in {
@@ -572,13 +575,13 @@ main, header, footer { position: relative; z-index: 1; }
   flex-wrap: wrap;
   margin-bottom: 6px;
 }
-.interp-pos { color: var(--purple); font-size: 13px; letter-spacing: 2px; }
-.interp-title { color: var(--gold-bright); font-size: 17px; letter-spacing: 2px; }
-.interp-en { color: var(--text-dim); font-size: 12.5px; font-style: italic; }
-.interp-pos-meaning { color: var(--text-dim); font-size: 12.5px; margin-bottom: 12px; }
+.interp-pos { color: var(--purple); font-size: 15px; letter-spacing: 2px; }
+.interp-title { color: var(--gold-bright); font-size: 21px; letter-spacing: 2px; }
+.interp-en { color: var(--text-dim); font-size: 14px; font-style: italic; }
+.interp-pos-meaning { color: var(--text-dim); font-size: 14px; margin-bottom: 14px; }
 .keywords { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 12px; }
 .kw {
-  font-size: 12px;
+  font-size: 13.5px;
   letter-spacing: 1px;
   padding: 3px 10px;
   border-radius: 999px;
@@ -591,11 +594,11 @@ main, header, footer { position: relative; z-index: 1; }
   color: #edb9b9;
   background: rgba(229, 143, 143, 0.07);
 }
-.interp-desc { font-size: 14px; line-height: 1.9; color: var(--text); }
+.interp-desc { font-size: 16px; line-height: 2.0; color: var(--text); }
 
 /* ============ 响应式 ============ */
 @media (max-width: 720px) {
-  :root { --card-w: 78px; --card-h: 130px; }
+  :root { --card-w: 104px; --card-h: 173px; }
   .app-header { flex-direction: column; gap: 6px; align-items: center; }
   .stack-area { height: 300px; }
   .tray-slot { width: 52px; }
