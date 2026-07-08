@@ -475,7 +475,6 @@
   function startReading() {
     state.flippedCount = 0;
     $('#reading-title').textContent = state.spread.nameZh;
-    $('#reading-hint').textContent = '点击卡牌，逐张翻开你的命运之牌';
     $('#btn-flip-all').disabled = false;
     $('#interpretations').innerHTML = '';
     renderBoard();
@@ -524,7 +523,6 @@
 
     state.flippedCount++;
     if (state.flippedCount === state.spread.positions.length) {
-      $('#reading-hint').textContent = '所有牌已翻开 —— 静心体会牌面给你的启示';
       $('#btn-flip-all').disabled = true;
     }
   }
