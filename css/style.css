@@ -75,6 +75,30 @@ main, header, footer { position: relative; z-index: 1; }
   pointer-events: none;          /* 只让品牌按钮可点，不挡页面 */
 }
 .app-header .brand { pointer-events: auto; }
+.back-btn {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #fff;
+  font-family: inherit;
+  font-size: 17px;
+  letter-spacing: 0.18em;
+  opacity: 0.85;
+  transition: opacity 200ms;
+}
+.back-btn:hover { opacity: 1; }
+.back-btn[hidden] { display: none; }
+/* 翻完所有牌后按钮区淡出移除 */
+.reading-actions.gone {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 400ms ease;
+}
+.reading-actions.done-hide { display: none; }
 .brand {
   display: inline-flex;
   align-items: center;

@@ -45,6 +45,8 @@
       el.classList.toggle('hidden', key !== name)
     );
     document.body.classList.toggle('on-home', name === 'home');
+    $('#brand-btn').hidden = name !== 'home';
+    $('#btn-back').hidden = name === 'home';
     if (window.__heroVideoCtl) {
       if (name === 'home') window.__heroVideoCtl.enter();
       else window.__heroVideoCtl.leave();
@@ -542,6 +544,7 @@
     state.flippedCount = 0;
     $('#reading-title').textContent = state.spread.nameZh;
     $('#btn-flip-all').disabled = false;
+    $('#reading-actions').classList.remove('gone', 'done-hide');
     $('#interpretations').innerHTML = '';
     renderBoard();
     showView('reading');
@@ -638,7 +641,9 @@
 
     state.flippedCount++;
     if (state.flippedCount === state.spread.positions.length) {
-      $('#btn-flip-all').disabled = true;
+      const actions = $('#reading-actions');
+      actions.classList.add('gone');
+      setTimeout(() => actions.classList.add('done-hide'), 450);
       setTimeout(renderSummary, 500);
     }
   }
@@ -967,7 +972,7 @@
   /* ---------- 事件绑定 ---------- */
 
   $('#brand-btn').addEventListener('click', () => showView('home'));
-  $('#btn-back-home').addEventListener('click', () => showView('home'));
+  $('#btn-back').addEventListener('click', () => showView('home'));
   $('#btn-reshuffle').addEventListener('click', () => {
     state.picked = [];
     state.deck = freshShuffledDeck();
@@ -982,9 +987,6 @@
     updateDrawProgress();
   });
   $('#btn-flip-all').addEventListener('click', flipAll);
-  $('#btn-restart').addEventListener('click', () => {
-    showView('home');
-  });
 
   renderSpreadGrid();
   renderHomeSky();

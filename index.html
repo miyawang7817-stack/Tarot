@@ -25,6 +25,10 @@
       </svg>
       <span class="brand-name">塔罗</span>
     </button>
+    <button class="back-btn" id="btn-back" hidden>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+      <span>返回</span>
+    </button>
   </header>
 
   <main id="app">
@@ -73,7 +77,6 @@
       <div class="drawn-tray" id="drawn-tray"></div>
       <div class="draw-actions">
         <button class="btn btn-ghost" id="btn-reshuffle">重新洗牌</button>
-        <button class="btn btn-ghost" id="btn-back-home">返回牌阵选择</button>
       </div>
     </section>
 
@@ -83,9 +86,8 @@
         <h2 id="reading-title"></h2>
       </div>
       <div class="board" id="board"></div>
-      <div class="reading-actions">
+      <div class="reading-actions" id="reading-actions">
         <button class="btn btn-gold" id="btn-flip-all">✨ 全部翻开</button>
-        <button class="btn btn-ghost" id="btn-restart">重新占卜</button>
       </div>
       <div class="interpretations" id="interpretations"></div>
     </section>
