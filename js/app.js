@@ -45,10 +45,6 @@
       el.classList.toggle('hidden', key !== name)
     );
     document.body.classList.toggle('on-home', name === 'home');
-    if (window.__heroVideoCtl) {
-      if (name === 'home') window.__heroVideoCtl.enter();
-      else window.__heroVideoCtl.leave();
-    }
     window.scrollTo({ top: 0 });
   }
 
@@ -110,54 +106,82 @@
     }
   }
 
-  /* 背景视频：循环边界淡入淡出 + 断流自愈（改编自设计稿逻辑） */
-  function setupHeroVideo() {
-    const video = $('#hero-video');
-    if (!video) return;
-    const FADE_MS = 500, LEAD = 0.55;
-    let raf = null, fadingOut = false;
-    const onHome = () => !views.home.classList.contains('hidden');
-    const fadeTo = (target, duration = FADE_MS) => {
-      if (raf) cancelAnimationFrame(raf);
-      const from = parseFloat(video.style.opacity || '0');
-      const start = performance.now();
-      const step = (t) => {
-        const p = Math.min(1, (t - start) / duration);
-        video.style.opacity = String(from + (target - from) * p);
-        if (p < 1) raf = requestAnimationFrame(step);
+  /* 首页背景：Canvas 穿越星空（太空旅行感）。
+     星星从深处向镜头缓缓飞来、拖出光迹；替代无法外链的设计稿视频 */
+  function setupSpaceTravel() {
+    const cv = $('#hero-canvas');
+    if (!cv) return;
+    const ctx = cv.getContext('2d');
+    const DPR = Math.min(2, window.devicePixelRatio || 1);
+    let W = 0, H = 0;
+    const resize = () => {
+      W = cv.width = cv.offsetWidth * DPR;
+      H = cv.height = cv.offsetHeight * DPR;
+    };
+    window.addEventListener('resize', resize);
+    resize();
+
+    const N = 240;
+    const spawn = (s) => {
+      s.x = (Math.random() - 0.5) * 1.6;
+      s.y = (Math.random() - 0.5) * 1.6;
+      s.z = 1;
+      s.pz = 1;
+      s.hue = Math.random() < 0.12 ? 46 : (Math.random() < 0.1 ? 265 : 0); // 少量金/紫星
+      return s;
+    };
+    const stars = Array.from({ length: N }, () => {
+      const s = spawn({});
+      s.z = 0.05 + Math.random() * 0.95;
+      s.pz = s.z;
+      return s;
+    });
+
+    if (REDUCED_MOTION) {           // 静态星空
+      const draw = () => {
+        ctx.clearRect(0, 0, W, H);
+        ctx.fillStyle = 'rgba(255,255,255,0.7)';
+        stars.forEach((s) => {
+          const f = Math.min(W, H);
+          ctx.fillRect(W / 2 + (s.x / s.z) * f * 0.5, H * 0.42 + (s.y / s.z) * f * 0.5, DPR, DPR);
+        });
       };
-      raf = requestAnimationFrame(step);
-    };
-    video.addEventListener('loadeddata', () => {
-      video.style.opacity = '0';
-      video.muted = true;
-      if (onHome()) { video.play().catch(() => {}); fadeTo(1); }
-    });
-    video.addEventListener('timeupdate', () => {
-      const rem = video.duration - video.currentTime;
-      if (!fadingOut && video.duration && rem <= LEAD && rem > 0) {
-        fadingOut = true;
-        fadeTo(0);
+      draw();
+      window.addEventListener('resize', draw);
+      return;
+    }
+
+    const SPEED = 0.000085;          // 缓慢梦幻的巡航速度
+    let last = 0;
+    const frame = (now) => {
+      requestAnimationFrame(frame);
+      if (views.home.classList.contains('hidden') || document.hidden) { last = now; return; }
+      const dt = Math.min(50, now - (last || now));
+      last = now;
+      ctx.clearRect(0, 0, W, H);
+      const cx = W / 2, cy = H * 0.42, f = Math.min(W, H);
+      for (const s of stars) {
+        s.pz = s.z;
+        s.z -= SPEED * dt * (0.6 + (1 - s.z) * 0.9);   // 越近越快，透视加速感
+        if (s.z <= 0.03) { spawn(s); continue; }
+        const sx = cx + (s.x / s.z) * f * 0.5;
+        const sy = cy + (s.y / s.z) * f * 0.5;
+        if (sx < -40 || sx > W + 40 || sy < -40 || sy > H + 40) { spawn(s); continue; }
+        const px = cx + (s.x / s.pz) * f * 0.5;
+        const py = cy + (s.y / s.pz) * f * 0.5;
+        const t = 1 - s.z;
+        const alpha = 0.12 + 0.78 * t * t;
+        ctx.strokeStyle = s.hue
+          ? `hsla(${s.hue} 80% 78% / ${alpha.toFixed(3)})`
+          : `rgba(255,255,255,${alpha.toFixed(3)})`;
+        ctx.lineWidth = Math.max(0.5, 2 * t) * DPR;
+        ctx.beginPath();
+        ctx.moveTo(px, py);
+        ctx.lineTo(sx, sy);
+        ctx.stroke();
       }
-    });
-    video.addEventListener('ended', () => {
-      video.style.opacity = '0';
-      setTimeout(() => {
-        video.currentTime = 0;
-        if (onHome()) video.play().catch(() => {});
-        fadingOut = false;
-        fadeTo(1);
-      }, 100);
-    });
-    setInterval(() => {
-      if (document.hidden || !onHome()) return;
-      if (video.error) { video.load(); }
-      else if (video.paused && !video.ended) { video.play().catch(() => {}); fadeTo(1); }
-    }, 3000);
-    window.__heroVideoCtl = {
-      enter() { if (video.readyState >= 2) { video.play().catch(() => {}); fadeTo(1); } },
-      leave() { video.pause(); },
     };
+    requestAnimationFrame(frame);
   }
 
   /* ---------- 抽牌页：命运轮盘（连续插值引擎） ----------
@@ -902,7 +926,7 @@
 
   renderSpreadGrid();
   renderHomeSky();
-  setupHeroVideo();
+  setupSpaceTravel();
   document.body.classList.add('on-home');
   setupCarouselInput();
 })();
