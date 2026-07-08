@@ -18,7 +18,7 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
-html { scroll-behavior: smooth; }
+html { scroll-behavior: smooth; overflow-x: clip; }
 
 body {
   font-family: 'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', 'STSong', 'Barlow', 'SimSun', Georgia, serif;
@@ -28,7 +28,7 @@ body {
     radial-gradient(900px 500px at 10% 20%, rgba(70, 40, 140, 0.25), transparent 60%),
     linear-gradient(180deg, var(--bg-1) 0%, var(--bg-0) 100%);
   min-height: 100vh;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 /* 星空背景 */
@@ -393,11 +393,12 @@ body.on-home .stars { display: none; }
 }
 
 @media (max-width: 860px) {
-  #view-home { height: auto; min-height: calc(100vh - 72px); overflow: auto; }
+  #view-home { height: auto; min-height: 100vh; overflow: auto; }
   .home-headline { font-size: clamp(28px, 8vw, 40px); }
-  .home-entries { flex-direction: column; align-items: center; margin-top: 32px; }
+  .home-entries { flex-direction: column; align-items: center; margin-top: 28px; }
   .entry-card { height: auto; aspect-ratio: auto; width: min(340px, 88vw); padding: 26px 20px; gap: 16px; }
-  .home-main { padding-top: 16px; }
+  .home-main { padding-top: 84px; }   /* 悬浮导航高度 + 呼吸空间 */
+  .home-footline { padding-bottom: 18px; }
 }
 
 /* ============ 解读页：内容全部居中 ============ */
@@ -1105,3 +1106,10 @@ body.on-home .stars { display: none; }
   .tray-slot { width: 52px; }
   .tray-card { width: 36px; height: 60px; }
 }
+@media (max-width: 480px) {
+  :root { --card-w: 94px; --card-h: 157px; }   /* 三张牌一行放下 */
+  .board { gap: 14px; }
+  #view-reading { padding-left: 12px; padding-right: 12px; }
+  .interp-card { padding: 18px 16px; }
+}
+.mat-smoke b { max-width: 70vw; }
