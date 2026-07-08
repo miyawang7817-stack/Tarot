@@ -58,8 +58,13 @@ body {
 main, header, footer { position: relative; z-index: 1; }
 
 /* ============ 顶栏 / 页脚 ============ */
-/* 与设计稿一致：透明悬浮，无分割线，所有页面统一 */
+/* 与设计稿一致：导航悬浮在页面内容之上，不占空间、无分割线 */
 .app-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 60;
   display: flex;
   align-items: center;
   gap: 16px;
@@ -67,7 +72,9 @@ main, header, footer { position: relative; z-index: 1; }
   padding: 0 clamp(24px, 4.5vw, 64px);
   background: transparent;
   border: none;
+  pointer-events: none;          /* 只让品牌按钮可点，不挡页面 */
 }
+.app-header .brand { pointer-events: auto; }
 .brand {
   display: inline-flex;
   align-items: center;
@@ -93,7 +100,7 @@ body.on-home .stars { display: none; }
 
 #view-home {
   position: relative;
-  height: calc(100vh - 72px);
+  height: 100vh;
   max-width: none;
   padding: 0 16px;
   overflow: hidden;
@@ -372,16 +379,17 @@ body.on-home .stars { display: none; }
   flex-direction: column;
   align-items: center;
   max-width: 1320px;
+  padding-top: 88px;               /* 让出悬浮导航的高度 */
 }
 #view-reading > * { width: 100%; }
 .board { margin: 0 auto; }
 
 /* ============ 抽牌页（单屏：flex 纵向分配，轮盘弹性伸缩） ============ */
 #view-draw {
-  height: calc(100vh - 72px);       /* 扣除顶栏 */
+  height: 100vh;                    /* 全屏，导航悬浮其上 */
   display: flex;
   flex-direction: column;
-  padding-top: 14px;
+  padding-top: 72px;
   padding-bottom: 12px;
   overflow: hidden;
   max-width: none;                  /* 全出血：光晕可延伸到屏幕边缘 */
