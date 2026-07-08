@@ -493,6 +493,7 @@
       slot.innerHTML = `
         <div class="slot-label"><span class="slot-order">${i + 1}</span><b>${pos.name}</b></div>
         <button class="flip-card" aria-label="翻开「${pos.name}」位置的牌">
+          <span class="flip-flash"></span>
           <div class="flip-inner">
             <div class="flip-face flip-back"><span class="card-back"></span></div>
             <div class="flip-face flip-front ${entry.reversed ? 'reversed' : ''}">
@@ -508,10 +509,31 @@
     });
   }
 
+  /* 翻牌粒子：金色光尘从卡面向四周迸散（在翻转过半时爆发） */
+  function spawnBurst(flipBtn) {
+    if (REDUCED_MOTION) return;
+    const burst = document.createElement('span');
+    burst.className = 'flip-burst';
+    for (let i = 0; i < 18; i++) {
+      const p = document.createElement('i');
+      const ang = Math.random() * Math.PI * 2;
+      const dist = 55 + Math.random() * 120;
+      p.style.setProperty('--px', (Math.cos(ang) * dist).toFixed(0) + 'px');
+      p.style.setProperty('--py', (Math.sin(ang) * dist).toFixed(0) + 'px');
+      p.style.setProperty('--ps', (2.5 + Math.random() * 5).toFixed(1) + 'px');
+      p.style.setProperty('--pd', (550 + Math.random() * 500).toFixed(0) + 'ms');
+      p.style.setProperty('--pdelay', (170 + Math.random() * 220).toFixed(0) + 'ms');
+      burst.appendChild(p);
+    }
+    flipBtn.appendChild(burst);
+    setTimeout(() => burst.remove(), 1600);
+  }
+
   function flipCard(index, slot, flipBtn) {
     if (flipBtn.classList.contains('flipped')) return;
     flipBtn.classList.add('flipped');
     slot.classList.add('revealed');
+    spawnBurst(flipBtn);
 
     const entry = state.picked[index];
     const orientCls = entry.reversed ? 'reversed' : 'upright';
