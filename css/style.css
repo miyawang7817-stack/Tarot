@@ -58,13 +58,15 @@ body {
 main, header, footer { position: relative; z-index: 1; }
 
 /* ============ 顶栏 / 页脚 ============ */
+/* 与设计稿一致：透明悬浮，无分割线，所有页面统一 */
 .app-header {
   display: flex;
   align-items: center;
   gap: 16px;
   height: 72px;
-  padding: 0 clamp(16px, 5vw, 48px);
-  border-bottom: 1px solid rgba(168, 130, 255, 0.12);
+  padding: 0 clamp(24px, 4.5vw, 64px);
+  background: transparent;
+  border: none;
 }
 .brand {
   display: inline-flex;
@@ -88,7 +90,6 @@ main, header, footer { position: relative; z-index: 1; }
 /* ============ 首页：黑色全屏 hero（设计稿复刻） ============ */
 body.on-home { background: #000; }
 body.on-home .stars { display: none; }
-body.on-home .app-header { border-bottom-color: transparent; background: transparent; }
 
 #view-home {
   position: relative;
@@ -1051,7 +1052,6 @@ body.on-home .app-header { border-bottom-color: transparent; background: transpa
 /* ============ 响应式 ============ */
 @media (max-width: 720px) {
   :root { --card-w: 118px; --card-h: 197px; }
-  .app-header { flex-direction: column; gap: 6px; align-items: center; }
   .stack-area { height: 300px; }
   .tray-slot { width: 52px; }
   .tray-card { width: 36px; height: 60px; }
