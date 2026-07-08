@@ -492,7 +492,7 @@ main, header, footer { position: relative; z-index: 1; }
 .flip-card {
   width: var(--card-w);
   height: var(--card-h);
-  perspective: 900px;
+  perspective: 1300px;
   cursor: pointer;
   border: none;
   background: none;
@@ -504,7 +504,16 @@ main, header, footer { position: relative; z-index: 1; }
   transform-style: preserve-3d;
   transition: transform 0.72s cubic-bezier(0.5, 0, 0.22, 1);
 }
-.flip-card.flipped .flip-inner { transform: rotateY(180deg); }
+.flip-card.flipped .flip-inner {
+  transform: rotateY(180deg);
+  animation: flip-door 0.9s cubic-bezier(0.42, 0, 0.24, 1);
+}
+/* 门板式翻转：转过头 8° 再弹回，落定有实物感 */
+@keyframes flip-door {
+  0%   { transform: rotateY(0deg); }
+  72%  { transform: rotateY(188deg); }
+  100% { transform: rotateY(180deg); }
+}
 .flip-card:not(.flipped):hover .flip-inner { transform: rotateY(14deg) translateY(-4px); }
 .flip-face {
   position: absolute;
@@ -530,6 +539,47 @@ main, header, footer { position: relative; z-index: 1; }
   0% { box-shadow: 0 0 0 rgba(227, 196, 110, 0); }
   40% { box-shadow: 0 0 28px rgba(227, 196, 110, 0.75); }
   100% { box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45); }
+}
+
+/* 入场：金尘凝聚成牌（过曝模糊虚影 → 逐渐变实），右上烟羽飘散 */
+.slot.materialize .flip-card {
+  animation: mat-in 1.05s cubic-bezier(0.3, 0.7, 0.3, 1) var(--mat-delay, 0ms) backwards;
+}
+@keyframes mat-in {
+  0%   { opacity: 0; filter: blur(12px) brightness(2.4); transform: scale(1.1) translateY(8px); }
+  45%  { opacity: 1; filter: blur(3px) brightness(1.5); }
+  100% { opacity: 1; filter: blur(0) brightness(1); transform: none; }
+}
+.slot.materialize .slot-label {
+  animation: mat-label 0.7s ease var(--mat-delay, 0ms) backwards;
+}
+@keyframes mat-label { from { opacity: 0; } }
+.mat-smoke {
+  position: absolute;
+  inset: -22%;
+  pointer-events: none;
+  z-index: 7;
+}
+.mat-smoke b {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle,
+    rgba(245, 221, 154, 0.5) 0%,
+    rgba(227, 196, 110, 0.16) 52%,
+    transparent 74%);
+  filter: blur(9px);
+  opacity: 0;
+  animation: smoke-drift 1.7s ease-out var(--sd, 0ms) both;
+}
+.mat-smoke .s1 { width: 64%; height: 42%; right: -6%; top: -4%; --sd: var(--mat-delay, 0ms); }
+.mat-smoke .s2 { width: 46%; height: 32%; right: 8%; top: 14%; --sd: calc(var(--mat-delay, 0ms) + 140ms); }
+.mat-smoke .s3 { width: 36%; height: 26%; right: -12%; top: 30%; --sd: calc(var(--mat-delay, 0ms) + 300ms); }
+@keyframes smoke-drift {
+  0%   { opacity: 0.95; transform: translate(0, 0) scale(0.6) rotate(0deg); }
+  100% { opacity: 0; transform: translate(52px, -84px) scale(1.6) rotate(22deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .slot.materialize .flip-card, .mat-smoke b { animation: none; }
 }
 
 /* 翻牌金色粒子迸发（参考素材：金尘随翻转飞散） */

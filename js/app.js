@@ -405,7 +405,8 @@
     const idx = Number(el.dataset.idx);
     const cardObj = car.cards[idx];
 
-    el.classList.add('rise');            // 主牌升起
+    el.classList.add('rise');            // 主牌升起，带金尘尾迹
+    spawnBurst(el, 'drift', 12);
     state.picked.push(cardObj.entry);
     state.deck.splice(idx, 1);
     renderTray();
@@ -489,11 +490,13 @@
     state.spread.positions.forEach((pos, i) => {
       const entry = state.picked[i];
       const slot = document.createElement('div');
-      slot.className = `slot slot-${i + 1}`;
+      slot.className = `slot slot-${i + 1} materialize`;
+      slot.style.setProperty('--mat-delay', (i * 220) + 'ms');
       slot.innerHTML = `
         <div class="slot-label"><span class="slot-order">${i + 1}</span><b>${pos.name}</b></div>
         <button class="flip-card" aria-label="翻开「${pos.name}」位置的牌">
           <span class="flip-flash"></span>
+          <span class="mat-smoke" aria-hidden="true"><b class="s1"></b><b class="s2"></b><b class="s3"></b></span>
           <div class="flip-inner">
             <div class="flip-face flip-back"><span class="card-back"></span></div>
             <div class="flip-face flip-front ${entry.reversed ? 'reversed' : ''}">
@@ -506,27 +509,41 @@
       const flipBtn = slot.querySelector('.flip-card');
       flipBtn.addEventListener('click', () => flipCard(i, slot, flipBtn));
       board.appendChild(slot);
+      // 凝聚过程中伴随金尘向右上飘散
+      setTimeout(() => spawnBurst(flipBtn, 'drift', 14), i * 220 + 120);
     });
   }
 
-  /* 翻牌粒子：金色光尘从卡面向四周迸散（在翻转过半时爆发） */
-  function spawnBurst(flipBtn) {
+  /* 金色光尘粒子。radial：翻牌时向四周迸散；drift：凝聚/升起时向右上飘散 */
+  function spawnBurst(host, mode = 'radial', count = 18) {
     if (REDUCED_MOTION) return;
     const burst = document.createElement('span');
     burst.className = 'flip-burst';
-    for (let i = 0; i < 18; i++) {
+    for (let i = 0; i < count; i++) {
       const p = document.createElement('i');
-      const ang = Math.random() * Math.PI * 2;
-      const dist = 55 + Math.random() * 120;
-      p.style.setProperty('--px', (Math.cos(ang) * dist).toFixed(0) + 'px');
-      p.style.setProperty('--py', (Math.sin(ang) * dist).toFixed(0) + 'px');
+      let px, py, delay;
+      if (mode === 'drift') {
+        const ang = Math.PI * (0.08 + Math.random() * 0.42);   // 右上扇区
+        const dist = 45 + Math.random() * 100;
+        px = Math.cos(ang) * dist;
+        py = -Math.sin(ang) * dist;
+        delay = Math.random() * 420;
+      } else {
+        const ang = Math.random() * Math.PI * 2;
+        const dist = 55 + Math.random() * 120;
+        px = Math.cos(ang) * dist;
+        py = Math.sin(ang) * dist;
+        delay = 170 + Math.random() * 220;
+      }
+      p.style.setProperty('--px', px.toFixed(0) + 'px');
+      p.style.setProperty('--py', py.toFixed(0) + 'px');
       p.style.setProperty('--ps', (2.5 + Math.random() * 5).toFixed(1) + 'px');
       p.style.setProperty('--pd', (550 + Math.random() * 500).toFixed(0) + 'ms');
-      p.style.setProperty('--pdelay', (170 + Math.random() * 220).toFixed(0) + 'ms');
+      p.style.setProperty('--pdelay', delay.toFixed(0) + 'ms');
       burst.appendChild(p);
     }
-    flipBtn.appendChild(burst);
-    setTimeout(() => burst.remove(), 1600);
+    host.appendChild(burst);
+    setTimeout(() => burst.remove(), 1800);
   }
 
   function flipCard(index, slot, flipBtn) {
