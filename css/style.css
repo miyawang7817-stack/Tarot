@@ -100,15 +100,90 @@ body.on-home .app-header { border-bottom-color: transparent; background: transpa
   flex-direction: column;
   background: #000;
 }
-#hero-canvas {
+/* 首页主视觉：巨型虹彩泡泡（皂膜质感，暖金主调 + 蓝紫流彩 + 亮边） */
+.hero-bubble {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 0;
+  left: 50%;
+  bottom: min(-26vh, -220px);
+  width: min(1100px, 86vw);
+  aspect-ratio: 1.42 / 1;
+  transform: translateX(-52%);
+  z-index: 1;
+  pointer-events: none;
+  animation: bub-float 16s ease-in-out infinite;
 }
-/* 首页氛围光斑（复用抽牌页的公转轨道） */
-#view-home .amb-home { position: absolute; inset: -10%; z-index: 1; }
+.hero-bubble i { position: absolute; display: block; border-radius: 50%; }
+/* 主泡（右）：金色皂膜 */
+.bub-main, .bub-rim, .bub-flecks {
+  right: -2%; bottom: 0;
+  width: 80%; aspect-ratio: 1;
+}
+.bub-main {
+  background:
+    radial-gradient(58% 58% at 32% 22%, rgba(250, 204, 122, 0.60), rgba(178, 114, 48, 0.24) 55%, transparent 76%),
+    radial-gradient(36% 30% at 56% 92%, rgba(98, 132, 255, 0.42), transparent 68%),
+    radial-gradient(24% 22% at 38% 82%, rgba(160, 95, 240, 0.36), transparent 70%),
+    radial-gradient(26% 22% at 78% 70%, rgba(255, 148, 188, 0.18), transparent 70%),
+    radial-gradient(30% 26% at 62% 58%, rgba(255, 214, 150, 0.20), transparent 72%),
+    radial-gradient(78% 78% at 50% 46%, rgba(120, 76, 36, 0.55), rgba(28, 18, 12, 0.30) 82%, transparent 100%);
+  filter: blur(6px);
+}
+/* 主泡亮边：右下弧线高光 */
+.bub-rim {
+  background: radial-gradient(closest-side, transparent 85%, rgba(255, 236, 205, 0.22) 92.5%, rgba(255, 252, 244, 0.98) 97%, transparent 100%);
+  -webkit-mask-image: linear-gradient(150deg, transparent 30%, #000 62%);
+  mask-image: linear-gradient(150deg, transparent 30%, #000 62%);
+  filter: blur(1px);
+}
+/* 主泡内的虹彩流斑（蓝 / 紫 / 粉，缓慢游动） */
+.bub-flecks {
+  background:
+    radial-gradient(17% 21% at 32% 52%, rgba(70, 115, 255, 0.62), transparent 70%),
+    radial-gradient(12% 15% at 52% 62%, rgba(145, 82, 245, 0.58), transparent 70%),
+    radial-gradient(10% 12% at 68% 46%, rgba(255, 120, 170, 0.34), transparent 70%),
+    radial-gradient(14% 17% at 44% 34%, rgba(255, 200, 112, 0.42), transparent 70%),
+    radial-gradient(9% 11% at 60% 58%, rgba(120, 220, 255, 0.32), transparent 70%);
+  filter: blur(12px);
+  mix-blend-mode: screen;
+  animation: bub-flecks 12s ease-in-out infinite alternate;
+}
+/* 副泡（左）：稍小、稍暗，与主泡相融 */
+.bub-side, .bub-side-rim {
+  left: 7%; bottom: 7%;
+  width: 54%; aspect-ratio: 1;
+}
+.bub-side {
+  background:
+    radial-gradient(58% 58% at 40% 24%, rgba(244, 198, 116, 0.48), rgba(156, 98, 42, 0.18) 58%, transparent 78%),
+    radial-gradient(30% 26% at 56% 88%, rgba(112, 122, 240, 0.26), transparent 70%),
+    radial-gradient(76% 76% at 50% 50%, rgba(104, 66, 32, 0.46), rgba(24, 16, 10, 0.18) 84%, transparent 100%);
+  filter: blur(8px);
+}
+.bub-side-rim {
+  background: radial-gradient(closest-side, transparent 87%, rgba(255, 240, 215, 0.7) 96%, transparent 100%);
+  -webkit-mask-image: linear-gradient(225deg, transparent 38%, #000 70%);
+  mask-image: linear-gradient(225deg, transparent 38%, #000 70%);
+}
+/* 泡泡下方的暖光晕 */
+.bub-glow {
+  left: 4%; right: -6%; bottom: -14%;
+  height: 74%;
+  background: radial-gradient(50% 50% at 50% 50%, rgba(255, 186, 110, 0.14), transparent 70%);
+  filter: blur(34px);
+}
+@keyframes bub-float {
+  0%, 100% { transform: translateX(-52%) translateY(0) scale(1); }
+  50%      { transform: translateX(-52%) translateY(-2%) scale(1.012); }
+}
+@keyframes bub-flecks {
+  0%   { transform: translate(0, 0) rotate(0deg); opacity: 0.8; }
+  100% { transform: translate(2.5%, -3.5%) rotate(7deg); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-bubble, .bub-flecks { animation: none; }
+}
+/* 首页氛围光斑（复用抽牌页的公转轨道，压暗给泡泡让位） */
+#view-home .amb-home { position: absolute; inset: -10%; z-index: 0; opacity: 0.55; }
 .amb-home .a1 { background: hsl(266 55% 46% / 0.34); }
 .amb-home .a2 { background: hsl(46 55% 48% / 0.26); }
 .amb-home .a3 { background: hsl(230 50% 50% / 0.28); }
